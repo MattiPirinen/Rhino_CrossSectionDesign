@@ -50,11 +50,20 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Dlubal.RFEM5, Version=5.3.0.0, Culture=neutral, PublicKeyToken=f22b2f92593d105e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <HintPath>..\..\..\..\Users\Public\Documents\Dlubal\SDK\Reference Assemblies\x64\Dlubal.RFEM5.dll</HintPath>
+    </Reference>
+    <Reference Include="MathNet.Numerics, Version=4.5.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MathNet.Numerics.4.5.1\lib\net40\MathNet.Numerics.dll</HintPath>
+    </Reference>
     <Reference Include="RhinoCommon">
       <HintPath>..\..\..\..\..\..\..\Program Files\Rhinoceros 5 (64-bit)\System\RhinoCommon.dll</HintPath>
       <Private>False</Private>
@@ -67,50 +76,127 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Windows.Forms.DataVisualization" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Axis.cs" />
-    <Compile Include="cd_customDrawCommand.cs" />
-    <Compile Include="ConcreteMaterial.cs" />
-    <Compile Include="CreateGeometryLarge.cs" />
-    <Compile Include="CreateReinforcement.cs" />
-    <Compile Include="Create_reinforcement.cs" />
-    <Compile Include="CrossSection.cs" />
-    <Compile Include="CurveAndBrepManipulation.cs" />
-    <Compile Include="BackgroundConduit.cs" />
-    <Compile Include="DivisionCondiot.cs" />
-    <Compile Include="GeometryLarge.cs" />
-    <Compile Include="GeometrySegment.cs" />
-    <Compile Include="HSL2RGB.cs" />
-    <Compile Include="IBrepGeometry.cs" />
-    <Compile Include="lockLayer.cs" />
-    <Compile Include="Material.cs" />
-    <Compile Include="MaterialType.cs" />
-    <Compile Include="MyConduit.cs" />
-    <Compile Include="PlugInOpen .cs" />
-    <Compile Include="Reinforcement.cs" />
-    <Compile Include="ResultConduit.cs" />
-    <Compile Include="SplitCurve.cs" />
-    <Compile Include="OpenMainPanel.cs" />
-    <Compile Include="ProjectPlugIn.cs" />
+    <Compile Include="ChartForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ChartForm.Designer.cs">
+      <DependentUpon>ChartForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ChooseColumnsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ChooseColumnsForm.Designer.cs">
+      <DependentUpon>ChooseColumnsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Classes and structures\Beam.cs" />
+    <Compile Include="Classes and structures\CircleCrossSection.cs" />
+    <Compile Include="Classes and structures\ClimateCondition.cs" />
+    <Compile Include="Classes and structures\Column.cs" />
+    <Compile Include="Classes and structures\ColLoadCase.cs" />
+    <Compile Include="Classes and structures\ColumnCalculationSettings.cs" />
+    <Compile Include="Classes and structures\CrackWidthCalculation.cs" />
+    <Compile Include="Classes and structures\UserDataList.cs" />
+    <Compile Include="Classes and structures\LoadCase.cs" />
+    <Compile Include="Classes and structures\ColLoadCaseDirection.cs" />
+    <Compile Include="Classes and structures\MeshSegment.cs" />
+    <Compile Include="Classes and structures\PredefinedCrossSection.cs" />
+    <Compile Include="Classes and structures\RectangleCrossSection.cs" />
+    <Compile Include="Classes and structures\RectangleGeometryLarge.cs" />
+    <Compile Include="Classes and structures\Reinforcement.cs" />
+    <Compile Include="Classes and structures\Countable.cs" />
+    <Compile Include="Classes and structures\CountableUserData.cs" />
+    <Compile Include="Classes and structures\RFEMConnection.cs" />
+    <Compile Include="Classes and structures\SimpleLoadCase.cs" />
+    <Compile Include="Classes and structures\SteelShellGeometryLarge.cs" />
+    <Compile Include="Classes and structures\CalcMesh.cs" />
+    <Compile Include="ClimateConditionsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ClimateConditionsForm.Designer.cs">
+      <DependentUpon>ClimateConditionsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Display classes\ColorScaleDisplay.cs" />
+    <Compile Include="Display classes\GeometryConduit.cs" />
+    <Compile Include="Display classes\LocalAxisConduit.cs" />
+    <Compile Include="Display classes\ResultConduit.cs" />
+    <Compile Include="Enumerates\Axis.cs" />
+    <Compile Include="Enumerates\CalcMethod.cs" />
+    <Compile Include="Enumerates\ColumnCalculationMethod.cs" />
+    <Compile Include="Enumerates\ExposureClass.cs" />
+    <Compile Include="Enumerates\LimitState.cs" />
+    <Compile Include="Enumerates\Moment.cs" />
+    <Compile Include="MainPanelMainTab.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainPanelRectTab.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MoreLinq\MoreEnumerable.MaxBy.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="RFEMAnalysisForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="RFEMAnalysisForm.Designer.cs">
+      <DependentUpon>RFEMAnalysisForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="RhinoCommands\cd_customDrawCommand.cs" />
+    <Compile Include="Classes and structures\ConcreteMaterial.cs" />
+    <Compile Include="Static classes\ChartManipulationTools.cs" />
+    <Compile Include="Static classes\ColumnCalculations.cs" />
+    <Compile Include="Static classes\ComboboxValues.cs" />
+    <Compile Include="Static classes\CreateGeometryLarge.cs" />
+    <Compile Include="Static classes\CreateReinforcement.cs" />
+    <Compile Include="RhinoCommands\Create_reinforcement.cs" />
+    <Compile Include="Classes and structures\CrossSection.cs" />
+    <Compile Include="Static classes\CurveAndBrepManipulation.cs" />
+    <Compile Include="Display classes\BackgroundConduit.cs" />
+    <Compile Include="Display classes\DivisionConduit.cs" />
+    <Compile Include="Classes and structures\GeometryLarge.cs" />
+    <Compile Include="Classes and structures\GeometrySegment.cs" />
+    <Compile Include="Classes and structures\HSL2RGB.cs" />
+    <Compile Include="Interfaces\ICalcGeometry.cs" />
+    <Compile Include="RhinoCommands\lockLayer.cs" />
+    <Compile Include="Abstract classes\Material.cs" />
+    <Compile Include="Enumerates\MaterialType.cs" />
+    <Compile Include="Display classes\MyConduit.cs" />
+    <Compile Include="Display classes\CrackWidthConduit.cs" />
+    <Compile Include="RhinoCommands\OpenMainPanel.cs" />
+    <Compile Include="Classes and structures\ProjectPlugIn.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MainPanel.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="MainPanel.Designer.cs">
       <DependentUpon>MainPanel.cs</DependentUpon>
     </Compile>
-    <Compile Include="SteelMaterial.cs" />
+    <Compile Include="Classes and structures\SteelMaterial.cs" />
+    <Compile Include="Static classes\ExcelGlobalSettings.cs" />
+    <Compile Include="Static classes\GetGeometry.cs" />
+    <Compile Include="Enumerates\SteelType.cs" />
+    <Compile Include="Static classes\MeshManipulationTools.cs" />
+    <Compile Include="Static classes\TestCalculations.cs" />
     <Compile Include="WinformUserControl.cs">
       <SubType>Component</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Icon1.ico" />
+    <Content Include="Icons\Icon1.ico" />
+    <None Include="Icons\rect.png" />
+    <None Include="Icons\rand.png" />
+    <None Include="Icons\OK.png" />
+    <None Include="Icons\Warning.png" />
     <Content Include="ValueDatabase.mdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -118,6 +204,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <DependentUpon>ValueDatabase.mdf</DependentUpon>
     </Content>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">
@@ -137,9 +224,63 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="ChartForm.resx">
+      <DependentUpon>ChartForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ChooseColumnsForm.resx">
+      <DependentUpon>ChooseColumnsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ClimateConditionsForm.resx">
+      <DependentUpon>ClimateConditionsForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainPanel.resx">
       <DependentUpon>MainPanel.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="RFEMAnalysisForm.resx">
+      <DependentUpon>RFEMAnalysisForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="Microsoft.Office.Core">
+      <Guid>{2DF8D04C-5BFA-101B-BDE5-00AA0044DE52}</Guid>
+      <VersionMajor>2</VersionMajor>
+      <VersionMinor>8</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="Microsoft.Office.Interop.Excel">
+      <Guid>{00020813-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>9</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="RFEM3">
+      <Guid>{6A74CD4B-9D69-440A-9DB1-71D52658C9EA}</Guid>
+      <VersionMajor>3</VersionMajor>
+      <VersionMinor>4</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="VBIDE">
+      <Guid>{0002E157-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>5</VersionMajor>
+      <VersionMinor>3</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
