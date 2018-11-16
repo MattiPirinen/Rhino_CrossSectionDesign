@@ -168,7 +168,7 @@ namespace CrossSectionDesign
             //textBox_Min.Text = Math.Round(minValue, 3).ToString();
             //textBox_Max.Text = Math.Round(maxValue, 3).ToString();
             //ProjectPlugIn.Instance.ColorScaleDisplay.SetColorScale(minValue, maxValue, 0, 0.7, "Utilization");
-            Rhino.RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void buttonChooseColumns_Click(object sender, EventArgs e)
@@ -200,7 +200,7 @@ namespace CrossSectionDesign
             {
                 //ProjectPlugIn.Instance.ColumnResultConduit.SetMaxAndMin(max, min);
                 ProjectPlugIn.Instance.ColorScaleDisplay.SetColorScale(min, max, 0, 0.7, "Utilization");
-                Rhino.RhinoDoc.ActiveDoc.Views.Redraw();
+                ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
             }
         }
 

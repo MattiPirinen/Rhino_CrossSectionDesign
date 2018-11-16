@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Rhino.Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,13 +14,15 @@ namespace CrossSectionDesign.Classes_and_structures
         public SteelMaterial SteelMaterial { get; set; }
         public SteelMaterial ReinfMaterial { get; set; }
         public int Rotation { get; set; }
-
-        public double ConcreteCover { get; set; }
-
+        public new double ConcreteCover { get; set; }
 
         public PredefinedCrossSection(string name, Beam beam): base(name,beam)
         {
+
         }
 
+        public PredefinedCrossSection(string name, Beam beam, Point3d addingCentroid) : base(name, beam, addingCentroid)
+        {
+        }
     }
 }

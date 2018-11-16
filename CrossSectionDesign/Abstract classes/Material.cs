@@ -21,7 +21,9 @@ namespace CrossSectionDesign.Abstract_classes
         
         public abstract Tuple<double,double> FailureStrains { get;}
 
-
+        public virtual double Density { get; set; }
+        public virtual double HeatConductivity { get; set; }
+        public virtual double SpecificHeat { get; set; }
 
     }
 }

@@ -143,7 +143,7 @@ namespace CrossSectionDesign
         private bool UpdateCircleValues()
         {
             
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
 
             if (int.TryParse(textBoxAmountH.Text, out var amount) &&
                 int.TryParse(textBoxConcreteC.Text, out var concreteC) &&
@@ -175,10 +175,7 @@ namespace CrossSectionDesign
                 _projectPlugIn.CurrentBeam.CrossSec.ClearGeometryLarges();
                 _projectPlugIn.CurrentBeam.CrossSec.ClearReinf();
 
-                _projectPlugIn.CurrentBeam.CrossSec = new CircleCrossSection(_projectPlugIn.CurrentBeam.CrossSec.Name, _projectPlugIn.CurrentBeam)
-                {
-                    AddingCentroid = _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid
-                };
+                _projectPlugIn.CurrentBeam.CrossSec = new CircleCrossSection(_projectPlugIn.CurrentBeam.CrossSec.Name, _projectPlugIn.CurrentBeam, _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid);
                 _projectPlugIn.Beams[_projectPlugIn.SelectedBeamIndex] = _projectPlugIn.CurrentBeam;
 
                 Column c = (Column)_projectPlugIn.CurrentBeam;
@@ -221,12 +218,8 @@ namespace CrossSectionDesign
                     Plane.WorldXY, _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid,
                     diameter / 2).ToNurbsCurve();
 
-                GeometryLarge larg = new GeometryLarge()
-                {
-                    Material = new ConcreteMaterial(comboBoxConcreteS.Text,c),
-                    Centroid = _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid,
-                    BaseBrep = Brep.CreatePlanarBreps(new[] { concreteOutLine })[0]
-                };
+                GeometryLarge larg = new GeometryLarge(MaterialType.Concrete, comboBoxConcreteS.Text,
+                    Brep.CreatePlanarBreps(new[] { concreteOutLine })[0], cc);
 
 
                 //Creates concrete geometry and bakes it into the current doc
@@ -235,8 +228,8 @@ namespace CrossSectionDesign
                 CreateGeometryLarge.GetLayerIndex(MaterialType.Concrete, ref attr);
                 attr.SetUserString("Name", Enum.GetName(typeof(MaterialType), MaterialType.Concrete));
                 attr.SetUserString("infType", "GeometryLarge");
-                Guid guid = RhinoDoc.ActiveDoc.Objects.AddBrep(larg.BaseBrep);
-                RhinoDoc.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+                Guid guid = ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(larg.GetModelUnitBrep());
+                ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
                 _projectPlugIn.CurrentBeam.CrossSec.GeometryLargeIds.Add(larg.Id);
 
 
@@ -251,7 +244,7 @@ namespace CrossSectionDesign
                         CurveOffsetCornerStyle.Sharp)[0];
 
                     Brep brep = CreateGeometryLarge.CreateHollowBrep(line1, line2);
-                    GeometryLarge gl = new GeometryLarge(MaterialType.Steel, comboBoxSteelS.SelectedItem.ToString(), brep,c);
+                    GeometryLarge gl = new GeometryLarge(MaterialType.Steel, comboBoxSteelS.SelectedItem.ToString(), brep,cc);
 
                     //Creates steel geometry and bakes it into the current doc
                     attr = new ObjectAttributes();
@@ -259,8 +252,8 @@ namespace CrossSectionDesign
                     CreateGeometryLarge.GetLayerIndex(MaterialType.Steel, ref attr);
                     attr.SetUserString("Name", Enum.GetName(typeof(MaterialType), MaterialType.Steel));
                     attr.SetUserString("infType", "GeometryLarge");
-                    guid = RhinoDoc.ActiveDoc.Objects.AddBrep(gl.BaseBrep);
-                    RhinoDoc.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+                    guid = ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(gl.GetModelUnitBrep());
+                    ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
                     _projectPlugIn.CurrentBeam.CrossSec.GeometryLargeIds.Add(gl.Id);
 
                 }
@@ -298,7 +291,7 @@ namespace CrossSectionDesign
                 foreach (Point3d point in tempPoint)
                 {
                     guid = doc.Objects.AddPoint(point);
-                    Reinforcement reinf = new Reinforcement(c)
+                    Reinforcement reinf = new Reinforcement(cc)
                     {
                         Material = new SteelMaterial(comboBoxReinfS.SelectedItem.ToString(),SteelType.Reinforcement,c),
                         Centroid = point,
@@ -308,7 +301,7 @@ namespace CrossSectionDesign
                     attr.UserData.Add(reinf);
                     attr.SetUserString("Name", "Reinforcement");
                     attr.SetUserString("infType", "Reinforcement");
-                    RhinoDoc.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+                    ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
                     _projectPlugIn.CurrentBeam.CrossSec.ReinforementIds.Add(reinf.Id);
 
                 }
@@ -349,7 +342,7 @@ namespace CrossSectionDesign
                 SetStrengthChartCurve(chartRectMy, Moment.My,
                     _projectPlugIn.CurrentBeam.CrossSec.CalculateStrengthCurve(new Plane(Point3d.Origin, Vector3d.YAxis, -Vector3d.XAxis), LimitState.Ultimate));
                 UpdateAllLoadCases();
-                RhinoDoc.ActiveDoc.Views.Redraw();
+                ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
             }
 
         
@@ -357,7 +350,7 @@ namespace CrossSectionDesign
 
         private bool UpdateRectValues()
         {
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
 
             if (int.TryParse(textBoxAmountH.Text, out var amountH) &&
                 int.TryParse(textBoxAmountW.Text, out var amountW) &&
@@ -399,11 +392,7 @@ namespace CrossSectionDesign
                 c.Kz = kz;
 
 
-                _projectPlugIn.CurrentBeam.CrossSec = new RectangleCrossSection(_projectPlugIn.CurrentBeam.CrossSec.Name, c)
-                {
-                    AddingCentroid = _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid
-                    
-                };
+                _projectPlugIn.CurrentBeam.CrossSec = new RectangleCrossSection(_projectPlugIn.CurrentBeam.CrossSec.Name, c, _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid);
                 
 
 
@@ -437,10 +426,12 @@ namespace CrossSectionDesign
 
                 Curve outLine = CreateGeometryLarge.CreateOutline(rc.AddingCentroid, concreteWidth, concreteHeigth,rotation)
                     .ToNurbsCurve();
+
+
                 Brep concreteBrep = Brep.CreatePlanarBreps(new[] { outLine })[0];
 
                 GeometryLarge rg = new GeometryLarge(MaterialType.Concrete,
-                    comboBoxConcreteS.Text, concreteBrep, c);
+                    comboBoxConcreteS.Text, concreteBrep, rc);
                 rg.BaseCurves.Add(outLine);
 
 
@@ -450,8 +441,8 @@ namespace CrossSectionDesign
                 CreateGeometryLarge.GetLayerIndex(MaterialType.Concrete, ref attr);
                 attr.SetUserString("Name", Enum.GetName(typeof(MaterialType), MaterialType.Concrete));
                 attr.SetUserString("infType", "GeometryLarge");
-                Guid guid = RhinoDoc.ActiveDoc.Objects.AddBrep(rg.BaseBrep);
-                RhinoDoc.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+                Guid guid = ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(rg.GetModelUnitBrep());
+                ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
                 rc.GeometryLargeIds.Add(rg.Id);
 
                 //Creates steel shell
@@ -465,7 +456,7 @@ namespace CrossSectionDesign
                         CurveOffsetCornerStyle.Sharp)[0];
 
                     Brep brep = CreateGeometryLarge.CreateHollowBrep(line1, line2);
-                    GeometryLarge gl = new GeometryLarge(MaterialType.Steel, comboBoxSteelS.SelectedItem.ToString(), brep,c);
+                    GeometryLarge gl = new GeometryLarge(MaterialType.Steel, comboBoxSteelS.SelectedItem.ToString(), brep,rc);
 
                     //Creates steel geometry and bakes it into the current doc
                     attr = new ObjectAttributes();
@@ -473,8 +464,8 @@ namespace CrossSectionDesign
                     CreateGeometryLarge.GetLayerIndex(MaterialType.Steel, ref attr);
                     attr.SetUserString("Name", Enum.GetName(typeof(MaterialType), MaterialType.Steel));
                     attr.SetUserString("infType", "GeometryLarge");
-                    guid = RhinoDoc.ActiveDoc.Objects.AddBrep(gl.BaseBrep);
-                    RhinoDoc.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+                    guid = ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(gl.GetModelUnitBrep());
+                    ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
                     rc.GeometryLargeIds.Add(gl.Id);
 
                 }
@@ -548,7 +539,7 @@ namespace CrossSectionDesign
                 foreach (Point3d point in points)
                 {
                     guid = doc.Objects.AddPoint(point);
-                    Reinforcement reinf = new Reinforcement(c)
+                    Reinforcement reinf = new Reinforcement(rc)
                     {
                         Material = new SteelMaterial(comboBoxReinfS.SelectedItem.ToString(), SteelType.Reinforcement, c),
                         Centroid = point,
@@ -558,7 +549,7 @@ namespace CrossSectionDesign
                     attr.UserData.Add(reinf);
                     attr.SetUserString("Name", "Reinforcement");
                     attr.SetUserString("infType", "Reinforcement");
-                    RhinoDoc.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+                    ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
                     _projectPlugIn.CurrentBeam.CrossSec.ReinforementIds.Add(reinf.Id);
                 }
 
@@ -669,7 +660,7 @@ namespace CrossSectionDesign
             checkBoxRC_OnOff_CheckStateChanged(checkBoxRC_OnOff, EventArgs.Empty);
             radioButtonRect_CheckedChanged(radioButtonRect, EventArgs.Empty);
             //dataGridViewLoads_CellEndEdit(dataGridViewLoads, DataGridViewCellEventArgs.Empty as DataGridViewCellEventArgs);
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
             ZoomToCurrentBeam();
         }
 
@@ -704,7 +695,6 @@ namespace CrossSectionDesign
                     Length = cLength * Math.Pow(10, -3),
                     Ky = ky,
                     Kz = kz
-                    
                 };
 
                 RectangleCrossSection cs = new RectangleCrossSection(name, col)
@@ -717,7 +707,6 @@ namespace CrossSectionDesign
                 _projectPlugIn.CurrentBeam = col;
                 _projectPlugIn.Beams.Add(col);
                 _projectPlugIn.SelectedBeamIndex = _projectPlugIn.Beams.Count - 1;
-
                 radioButtonRect.Checked = true;
                 comboBoxSteelS.Enabled = false;
                 UpdateCrossSectionValues();
@@ -748,24 +737,26 @@ namespace CrossSectionDesign
 
             UpdateResults();
             //dataGridViewLoads_CellEndEdit(dataGridViewLoads, DataGridViewCellEventArgs.Empty as DataGridViewCellEventArgs);
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
             ZoomToCurrentBeam();
 
         }
 
         private void ZoomToCurrentBeam()
         {
-            RhinoView rw = RhinoDoc.ActiveDoc.Views.Find("Cross section view", false) ??
-                           RhinoDoc.ActiveDoc.Views.Add("Cross section view", DefinedViewportProjection.Top, Bounds, false);
+            RhinoView rw = ProjectPlugIn.Instance.ActiveDoc.Views.Find("Cross section view", false) ??
+                           ProjectPlugIn.Instance.ActiveDoc.Views.Add("Cross section view", DefinedViewportProjection.Top, Bounds, false);
             rw.Maximized = true;
-            RhinoDoc.ActiveDoc.Views.ActiveView = rw;
+            ProjectPlugIn.Instance.ActiveDoc.Views.ActiveView = rw;
             BoundingBox bb = _projectPlugIn.CurrentBeam.CrossSec.GetBoundingBox(Plane.WorldXY);
+            bb.Transform(Transform.Scale(_projectPlugIn.CurrentBeam.CrossSec.AddingCentroid, 1.0 /
+                _projectPlugIn.Unitfactor));
             if (bb.Diagonal.Length != 0) {
                 Transform transform = Transform.Scale(bb.Center, 1.5);
                 bb.Transform(transform);
-                RhinoDoc.ActiveDoc.Views.ActiveView.ActiveViewport.ZoomBoundingBox(bb);
+                ProjectPlugIn.Instance.ActiveDoc.Views.ActiveView.ActiveViewport.ZoomBoundingBox(bb);
             }
-
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void buttonRectCalculate_Click(object sender, EventArgs e)
@@ -775,7 +766,7 @@ namespace CrossSectionDesign
                    _projectPlugIn.CurrentBeam.CrossSec.CalculateStrengthCurve(Plane.WorldXY, LimitState.Ultimate));
             SetStrengthChartCurve(chartRectMy, Moment.My,
                 _projectPlugIn.CurrentBeam.CrossSec.CalculateStrengthCurve(new Plane(Point3d.Origin, Vector3d.YAxis, -Vector3d.XAxis), LimitState.Ultimate));
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void UpdateResults()
@@ -788,7 +779,7 @@ namespace CrossSectionDesign
                     _projectPlugIn.CurrentBeam.CrossSec.CalculateStrengthCurve(new Plane(Point3d.Origin, Vector3d.YAxis, -Vector3d.XAxis), LimitState.Ultimate));
             }
             UpdateAllLoadCases();
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void checkBoxRC_OnOff_CheckStateChanged(object sender, EventArgs e)
@@ -1014,7 +1005,7 @@ namespace CrossSectionDesign
             }
             if (UpdateCrossSectionValues())
                 UpdateResults();
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void dataGridViewLoad_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)

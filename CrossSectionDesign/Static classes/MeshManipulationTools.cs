@@ -1,4 +1,5 @@
-﻿using Rhino;
+﻿using CrossSectionDesign.Classes_and_structures;
+using Rhino;
 using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
@@ -133,7 +134,7 @@ namespace CrossSectionDesign.Static_classes
             foreach (Point3d point in pl)
             {
                 int i = 0;
-                while (!isApproxEqual(m.Vertices[i], point, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance))
+                while (!isApproxEqual(m.Vertices[i], point, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance))
                     i++;
                 indices.Add(i);
             }

@@ -15,7 +15,7 @@ namespace CrossSectionDesign.Interfaces
         Material Material { get; set; }
         Dictionary<LoadCase, double> Stresses { get; set; }
         ICalcGeometry DeepCopy();
-
+        Mesh GetModelScaleResultMesh();
         void ModifyMesh(double distance);
     }
 }

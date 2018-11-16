@@ -87,7 +87,7 @@ namespace CrossSectionDesign.RhinoCommands
                 Point3d point = obj.Point().Location;
 
                 //TODO add the functionality how to assign different steel materials.
-                Reinforcement reinf = new Reinforcement(ProjectPlugIn.Instance.CurrentBeam)
+                Reinforcement reinf = new Reinforcement(ProjectPlugIn.Instance.CurrentBeam.CrossSec)
                 {
                     Material = new SteelMaterial("B500B",SteelType.Reinforcement, ProjectPlugIn.Instance.CurrentBeam), 
                     Centroid = point,

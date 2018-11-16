@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CrossSectionDesign.Classes_and_structures;
 using CrossSectionDesign.Enumerates;
 using Rhino.Geometry;
 using Rhino.Geometry.Intersect;
@@ -63,7 +64,7 @@ namespace CrossSectionDesign.Static_classes
 
         private static void CutGeometryWithPlanes(ref List<Brep> cutBrepList, Brep[] brepList, List<Plane> cuttingPlanes)
         {
-            Rhino.RhinoDoc doc = Rhino.RhinoDoc.ActiveDoc;
+            Rhino.RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
 
             foreach (Plane cuttingPlane in cuttingPlanes)
             {

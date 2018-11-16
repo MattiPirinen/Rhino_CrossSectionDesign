@@ -11,31 +11,36 @@ namespace CrossSectionDesign.Classes_and_structures
     [System.Runtime.InteropServices.Guid("D11BBCBB-37B5-4C31-BF70-97A498D12514")]
     public class GeometryLarge : CountableUserData
     {
-
+        public CrossSection OwnerCrossSection { get; set; }
         private Brep _baseBrep;
         public int CrosecId { get; set; }
         public Point3d Centroid { get; set; }
         public List<Curve> BaseCurves { get; set; } = new List<Curve>();
         public Brep BaseBrep { get { return _baseBrep; } set {
+                value.Transform(UnitTransform);
                 AreaMassProp = AreaMassProperties.Compute(value);
                 _baseBrep = value;
+                CreateCalcMesh();
 
-                MeshingParameters mp = new MeshingParameters
-                {
-                    SimplePlanes = false,
-                    GridMaxCount = 300,
-                    GridMinCount = 400,
-                };
-
-
-                Mesh[] temp = Mesh.CreateFromBrep(value,mp);
-                CalcMesh = new CalcMesh(temp[0],this);
-                CalcMesh.Material = Material;
             } }
         public Material Material { get; set; }
         public CalcMesh CalcMesh { get; private set; }
-        public Beam OwnerBeam { get; private set; }
         public AreaMassProperties AreaMassProp { get; private set; }
+
+
+        private void CreateCalcMesh()
+        {
+            MeshingParameters mp = new MeshingParameters
+            {
+                SimplePlanes = false,
+                GridMaxCount = 300,
+                GridMinCount = 400,
+            };
+
+            Mesh[] temp = Mesh.CreateFromBrep(_baseBrep, mp);
+            CalcMesh = new CalcMesh(temp[0], this);
+            CalcMesh.Material = Material;
+        }
 
 
         //Constructor
@@ -46,18 +51,30 @@ namespace CrossSectionDesign.Classes_and_structures
         }
 
         //Constructor
-        public GeometryLarge(MaterialType materialType, string materialName, Brep baseBrep, Beam bm)
+        public GeometryLarge(MaterialType materialType, string materialName, Brep baseBrep, CrossSection cs)
         {
+            UnitTransform = Transform.Scale(cs.AddingCentroid, ProjectPlugIn.Instance.Unitfactor);
             if (materialType == MaterialType.Concrete)
-                Material = new ConcreteMaterial(materialName, bm);
+                Material = new ConcreteMaterial(materialName, cs.HostBeam);
             else if (materialType == MaterialType.Steel)
-                Material = new SteelMaterial(materialName,SteelType.StructuralSteel, bm);
+                Material = new SteelMaterial(materialName,SteelType.StructuralSteel, cs.HostBeam);
             BaseBrep = baseBrep;
-            OwnerBeam = bm;
+            OwnerCrossSection = cs;
+            InverseUnitTransform = Transform.Scale(cs.AddingCentroid, 1.0/ProjectPlugIn.Instance.Unitfactor);
             Id = _idCounter;
             _idCounter++;
 
         }
+
+        public Brep GetModelUnitBrep()
+        {
+            Brep b = BaseBrep.DuplicateBrep();
+            b.Transform(InverseUnitTransform);
+            return b;
+        }
+
+
+
 
 
         public override string Description => "Segment with properties";
@@ -79,8 +96,13 @@ namespace CrossSectionDesign.Classes_and_structures
         protected override bool Read(Rhino.FileIO.BinaryArchiveReader archive)
         {
             Rhino.Collections.ArchivableDictionary dict = archive.ReadDictionary();
-            Beam ownerBeam = ProjectPlugIn.Instance.Beams.Find(o => o.Id == dict.GetInteger("BeamId"));
-            BaseBrep = (Brep) dict["baseBrep"];
+            UnitTransform = (Transform)dict["UnitTransform"];
+            InverseUnitTransform = (Transform)dict["InverseUnitTransform"];
+
+            _baseBrep = (Brep) dict["baseBrep"];
+            AreaMassProp = AreaMassProperties.Compute(_baseBrep);
+            CreateCalcMesh();
+
 
             int noBaseCurves = dict.GetInteger("NoBaseCurves");
             
@@ -92,12 +114,12 @@ namespace CrossSectionDesign.Classes_and_structures
 
             Id = (int) dict["Id"];
             if ((string)dict["Material"] == "Concrete")
-                Material = new ConcreteMaterial((string) dict["MaterialStrength"], ownerBeam);
+                Material = new ConcreteMaterial((string) dict["MaterialStrength"], null);
             else if ((string)dict["Material"] == "Steel")
-                Material = new SteelMaterial((string)dict["MaterialName"],SteelType.StructuralSteel, ownerBeam);
+                Material = new SteelMaterial((string)dict["MaterialName"],SteelType.StructuralSteel, null);
             //TODO Add extra materials
             else
-                Material = new ConcreteMaterial("C30/37", ownerBeam);
+                Material = new ConcreteMaterial("C30/37", null);
                 
             return true;
         }
@@ -105,11 +127,12 @@ namespace CrossSectionDesign.Classes_and_structures
         protected override bool Write(Rhino.FileIO.BinaryArchiveWriter archive)
         {
             var dict = new Rhino.Collections.ArchivableDictionary(20181023, "Values");
-
+            dict.Set("UnitTransform", UnitTransform);
+            dict.Set("InverseUnitTransform", InverseUnitTransform);
             dict.Set("baseBrep", BaseBrep);
             dict.Set("Id", Id);
-            if (OwnerBeam != null)
-                dict.Set("BeamId", OwnerBeam.Id);
+            if (OwnerCrossSection != null)
+                dict.Set("CrossSectionId", OwnerCrossSection.Id);
             else
                 dict.Set("BeamId", -1);
             dict.Set("NoBaseCurves", BaseCurves.Count);

@@ -16,6 +16,8 @@ namespace CrossSectionDesign.Classes_and_structures
 {
     public class CrossSection : Countable
     {
+
+
         public MaterialType MaterialResultShown { get; set; } = MaterialType.Steel;
         public Tuple<double, double> MinAndMaxStress
         {
@@ -27,19 +29,37 @@ namespace CrossSectionDesign.Classes_and_structures
                     value.Item1*Math.Pow(10,-6), value.Item2 * Math.Pow(10, -6), 0, 0.7, "Stress [MPA]");
             }
         }
-
+        public Transform UnitTransform { get; set; }
+        public Transform InverseUnitTransform { get; set; }
         public bool HasSteelShell { get; set; }
-        public CrossSection(string name, Beam b)//,ConcreteMaterial concreteMaterial)
+        public CrossSection(string name, Beam b)
         {
             AddingCentroid = ProjectPlugIn.Instance.NextCentroid();
-            //ConcreteMaterial = concreteMaterial;
             Name = name;
             HostBeam = b;
             GeometryLargeIds.CollectionChanged += UpdateGeometricValuesEvent;
             ReinforementIds.CollectionChanged += UpdateGeometricValuesEvent;
 
             GeometryList = Tuple.Create(Plane.WorldXY, new List<ICalcGeometry>());
+
+            UnitTransform = Transform.Scale(AddingCentroid, ProjectPlugIn.Instance.Unitfactor);
+            InverseUnitTransform = Transform.Scale(AddingCentroid, 1.0 / ProjectPlugIn.Instance.Unitfactor);
         }
+        public CrossSection(string name, Beam b, Point3d addingCentroid)
+        {
+            AddingCentroid = addingCentroid;
+            Name = name;
+            HostBeam = b;
+            GeometryLargeIds.CollectionChanged += UpdateGeometricValuesEvent;
+            ReinforementIds.CollectionChanged += UpdateGeometricValuesEvent;
+
+            GeometryList = Tuple.Create(Plane.WorldXY, new List<ICalcGeometry>());
+            UnitTransform = Transform.Scale(AddingCentroid, ProjectPlugIn.Instance.Unitfactor);
+            InverseUnitTransform = Transform.Scale(AddingCentroid, 1.0/ProjectPlugIn.Instance.Unitfactor);
+
+        }
+
+
 
         private void UpdateGeometricValuesEvent(object sender, EventArgs e)
         {
@@ -49,6 +69,7 @@ namespace CrossSectionDesign.Classes_and_structures
             ProjectPlugIn.Instance.ResultConduit.Enabled = false;
             ProjectPlugIn.Instance.LocalAxisConduit.Enabled = false;
             ProjectPlugIn.Instance.ColorScaleDisplay.Enabled = false;
+            ProjectPlugIn.Instance.CrackWidthConduit.Enabled = false;
             //Calculate new geometric propertios
             CalcConcreteValues();
             CalcReinfValues();
@@ -78,7 +99,7 @@ namespace CrossSectionDesign.Classes_and_structures
                     minDistance = Math.Min(minDistance, distance);
                 }
             }
-            ConcreteCover = minDistance*Math.Pow(10,-3);
+            ConcreteCover = minDistance;
 
         }
 
@@ -95,22 +116,18 @@ namespace CrossSectionDesign.Classes_and_structures
         public double Heigth(Plane calcPlane)
         {
             BoundingBox bb = GetBoundingBox(calcPlane);
-            return (bb.Max.Y - bb.Min.Y) * Math.Pow(10, -3);
+            return (bb.Max.Y - bb.Min.Y);
         }
         public double Width(Plane calcPlane)
         {
             BoundingBox bb = GetBoundingBox(calcPlane);
-            return (bb.Max.X - bb.Min.X) * Math.Pow(10, -3);
+            return (bb.Max.X - bb.Min.X);
         }
 
         public string Name { get; private set; }
         public UserDataList GeometryLargeIds { get; set; } = new UserDataList();
         public UserDataList ReinforementIds { get; set; } = new UserDataList();
         public Beam HostBeam { get; set; }
-
-
-
-
         
         private ConcreteMaterial _concreteMaterial;
         private Tuple<double, double> _minAndMaxStress;
@@ -122,7 +139,7 @@ namespace CrossSectionDesign.Classes_and_structures
         }
 
 
-        public Point3d AddingCentroid { get; set; }
+        public Point3d AddingCentroid { get; private set; }
         public Tuple<Plane, List<ICalcGeometry>> GeometryList { get; private set; }
         public Point3d NeutralAxisCenter { get; set; }
 
@@ -153,7 +170,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
 
            Curve c = Curve.JoinCurves(curves)[0];
-           c.TryGetPlane(out Plane pl, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+           c.TryGetPlane(out Plane pl, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
            if (pl.ZAxis.Z < 0) pl.Flip();
 
            angle = Vector3d.VectorAngle(pl.ZAxis, Vector3d.ZAxis, 
@@ -211,11 +228,11 @@ namespace CrossSectionDesign.Classes_and_structures
             foreach (Reinforcement reinf in reinfs)
             {
                 Point3d p = reinf.Centroid;
-                double Area = reinf.Area * Math.Pow(10, -6);
+                double Area = reinf.Area;
                 Astot += Area;
                 double I = Math.Pow(reinf.Diameter, 4) * Math.PI / 64;
-                Is_yy += Area * Math.Pow((c.Y - p.Y) * Math.Pow(10, -3), 2) + I;
-                Is_zz += Area * Math.Pow((c.X - p.X) * Math.Pow(10, -3), 2) + I;
+                Is_yy += Area * Math.Pow((c.Y - p.Y), 2) + I;
+                Is_zz += Area * Math.Pow((c.X - p.X), 2) + I;
             }
             I_Reinf = new Vector3d(0, Is_yy, Is_zz);
             if (Astot == 0)
@@ -237,12 +254,12 @@ namespace CrossSectionDesign.Classes_and_structures
                 if (geomL.Material.GetType() == typeof(ConcreteMaterial))
                 {
                     Point3d p = geomL.Centroid;
-                    double Area = geomL.AreaMassProp.Area * Math.Pow(10, -6);
+                    double Area = geomL.AreaMassProp.Area;
                     Actot += Area;
-                    double Iy = geomL.AreaMassProp.CentroidCoordinatesMomentsOfInertia.Y * Math.Pow(10, -12);
-                    double Iz = geomL.AreaMassProp.CentroidCoordinatesMomentsOfInertia.X * Math.Pow(10, -12);
-                    Ic_yy += Area * Math.Pow((c.Y - p.Y) * Math.Pow(10, -3), 2) + Iy;
-                    Ic_zz += Area * Math.Pow((c.X - p.X) * Math.Pow(10, -3), 2) + Iz;
+                    double Iy = geomL.AreaMassProp.CentroidCoordinatesMomentsOfInertia.Y;
+                    double Iz = geomL.AreaMassProp.CentroidCoordinatesMomentsOfInertia.X;
+                    Ic_yy += Area * Math.Pow((c.Y - p.Y), 2) + Iy;
+                    Ic_zz += Area * Math.Pow((c.X - p.X), 2) + Iz;
                 }
             }
             I_Concrete = new Vector3d(0, Ic_yy, Ic_zz);
@@ -306,7 +323,7 @@ namespace CrossSectionDesign.Classes_and_structures
         /*
         public void CreateGeometryForCalc(Plane calcPlane)
         {
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
             
             List<GeometrySegment> segList = new List<GeometrySegment>();
             List<GeometryLarge> geometryLarges = GetGeometryLarges();
@@ -345,7 +362,7 @@ namespace CrossSectionDesign.Classes_and_structures
         public List<Reinforcement> GetReinforcements()
         {
             List<Reinforcement> temp = new List<Reinforcement>();
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -358,6 +375,19 @@ namespace CrossSectionDesign.Classes_and_structures
 
             return temp;
         }
+
+        public List<InspectionPoint> GetInspectionPoints()
+        {
+            List<InspectionPoint> temp = new List<InspectionPoint>();
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "InspectionPoint", true);
+            foreach (RhinoObject rhinoObject in objs)
+            {
+                Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
+                temp.Add(list.Find(typeof(InspectionPoint)) as InspectionPoint);
+            }
+            return temp;
+        }
+
 
         public BoundingBox GetBoundingBox(Plane plane)
         {
@@ -399,7 +429,7 @@ namespace CrossSectionDesign.Classes_and_structures
             {
                 if (larg.Material.GetType() == typeof(ConcreteMaterial))
                 {
-                    Brep[] brepsTemp = Brep.CreateBooleanUnion(new Brep[] { totBrep, larg.BaseBrep }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    Brep[] brepsTemp = Brep.CreateBooleanUnion(new Brep[] { totBrep, larg.BaseBrep }, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
                     if (brepsTemp.Length == 1)
                         totBrep = brepsTemp[0];
                     else
@@ -417,7 +447,7 @@ namespace CrossSectionDesign.Classes_and_structures
             {
                 length += c.GetLength();
             }
-            return length * Math.Pow(10, -3);
+            return length;
 
 
         }
@@ -432,7 +462,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
         public Reinforcement GetOneReinforcement(int id)
         {
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -448,7 +478,7 @@ namespace CrossSectionDesign.Classes_and_structures
         public List<GeometryLarge> GetGeometryLarges()
         {
             List<GeometryLarge> geometryLarges = new List<GeometryLarge>();
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -468,7 +498,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
         public void ClearGeometryLarges()
         {
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
 
             foreach (RhinoObject rhinoObject in objs)
             {
@@ -477,11 +507,11 @@ namespace CrossSectionDesign.Classes_and_structures
                 if (GeometryLargeIds.IndexOf(temp.Id) != -1)
                 {
                     int layerIndex = rhinoObject.Attributes.LayerIndex;
-                    Layer l = RhinoDoc.ActiveDoc.Layers[layerIndex];
+                    Layer l = ProjectPlugIn.Instance.ActiveDoc.Layers[layerIndex];
                     l.IsLocked = false;
                     l.CommitChanges();
                     
-                    RhinoDoc.ActiveDoc.Objects.Delete(rhinoObject, true);
+                    ProjectPlugIn.Instance.ActiveDoc.Objects.Delete(rhinoObject, true);
                     l.IsLocked = true;
                     l.CommitChanges();
                 }
@@ -492,13 +522,13 @@ namespace CrossSectionDesign.Classes_and_structures
 
         public void ClearReinf()
         {
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
                 Reinforcement rf = list.Find(typeof(Reinforcement)) as Reinforcement;
                 if (ReinforementIds.IndexOf(rf.Id) != -1)
-                    RhinoDoc.ActiveDoc.Objects.Delete(rhinoObject, true);
+                    ProjectPlugIn.Instance.ActiveDoc.Objects.Delete(rhinoObject, true);
             }
             ReinforementIds.Clear();
         }
@@ -527,18 +557,18 @@ namespace CrossSectionDesign.Classes_and_structures
                 double strain = LinearInterplate(strainAtMin, strainAtMax, MinY, MaxY,
                     cp.Y);
                 double stress = segment.Material.Stress(strain, ls);
-                NList.Add(stress * segment.Area * Math.Pow(10, -6));
-                MzList.Add(NList[NList.Count - 1] * cpWorld.Y * Math.Pow(10, -3));
-                MyList.Add(NList[NList.Count - 1] * cpWorld.X * Math.Pow(10, -3));
+                NList.Add(stress * segment.Area);
+                MzList.Add(NList[NList.Count - 1] * cpWorld.Y);
+                MyList.Add(NList[NList.Count - 1] * cpWorld.X);
             }
 
             double N = NList.Sum();
 
             Point3d c = Centroid();
-            double tempTerm = N * (c.Y) * Math.Pow(10, -3);
+            double tempTerm = N * c.Y;
             double Mz = MzList.Sum() - tempTerm;
 
-            tempTerm = N * (c.X) * Math.Pow(10, -3);
+            tempTerm = N * c.X;
             double My = MyList.Sum() - tempTerm;
 
             return new Point3d(N, My, Mz);
@@ -668,13 +698,13 @@ namespace CrossSectionDesign.Classes_and_structures
                 }
                 calcPlane.Rotate(Math.PI*2 / 12, Vector3d.ZAxis);
             }
-            lines.ForEach(l => RhinoDoc.ActiveDoc.Objects.AddPolyline(l));
+            lines.ForEach(l => ProjectPlugIn.Instance.ActiveDoc.Objects.AddPolyline(l));
 
             List<Curve> curves = new List<Curve>();
             lines.ForEach(l => curves.Add(l.ToNurbsCurve().Rebuild(100, 2, true)));
-            curves.ForEach(l => RhinoDoc.ActiveDoc.Objects.AddCurve(l));
+            curves.ForEach(l => ProjectPlugIn.Instance.ActiveDoc.Objects.AddCurve(l));
             Brep tempBrep =  Brep.CreateFromLoft(curves, Point3d.Unset, Point3d.Unset, LoftType.Normal, true)[0];
-            RhinoDoc.ActiveDoc.Objects.AddBrep(tempBrep);
+            ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(tempBrep);
             StrengthSurface = Tuple.Create(tempBrep,lines[0][lines[0].Count - 1], lines[0][0]);
             
         }

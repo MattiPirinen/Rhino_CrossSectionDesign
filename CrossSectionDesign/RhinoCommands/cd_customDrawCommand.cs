@@ -28,10 +28,8 @@ namespace CrossSectionDesign.RhinoCommands
             
             Line testLine = new Line(new Point3d( 0,0,0),new Point3d(rand.Next(100),rand.Next(100), 0));
             
-            MyConduit cond = new MyConduit(testLine) {Enabled = true};
             doc.Views.Redraw();
 
-            cond.Enabled = false;
             return Result.Success;
         }
     }

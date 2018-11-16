@@ -39,11 +39,11 @@ namespace CrossSectionDesign.Display_classes
 
             if (_projectPlugIn.CurrentBeam != null)
             {
-                
                 Beam beam = _projectPlugIn.CurrentBeam;
-
+                Transform tr = Transform.Scale(beam.CrossSec.AddingCentroid, 1.0 / ProjectPlugIn.Instance.Unitfactor);
                 Point3d c = beam.CrossSec.Centroid();
                 BoundingBox bb = beam.CrossSec.GetBoundingBox(Plane.WorldXY);
+                bb.Transform(tr);
                 double length = bb.Diagonal.Length;
 
                 //Create neutral axis
@@ -51,8 +51,9 @@ namespace CrossSectionDesign.Display_classes
                 if (index != -1)
                 {
                     SimpleLoadCase slc = (SimpleLoadCase)beam.LoadCases[index];
-                    Point3d p = slc.NeutralAxis.Origin;
-                    Plane pl = slc.NeutralAxis;
+                    Plane pl = new Plane(slc.NeutralAxis);
+                    pl.Transform(tr);
+                    Point3d p = pl.Origin;
                     Point3d startPt = p - pl.XAxis * length / 2;
                     double distance = new Vector3d((p + pl.XAxis * length / 2) - (p - pl.XAxis * length / 2)).Length;
                     int totNum = 20;

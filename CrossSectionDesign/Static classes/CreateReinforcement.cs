@@ -18,7 +18,7 @@ namespace CrossSectionDesign.Static_classes
         //Creates reinforcement objects and saves them into the selected point as userData
         public static Reinforcement[] CreateReinforcements(string mName,double diam)
         {
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
 
             //Allow user to pick multiple objects
             const Rhino.DocObjects.ObjectType geometryFilter = Rhino.DocObjects.ObjectType.Point;
@@ -85,7 +85,7 @@ namespace CrossSectionDesign.Static_classes
             {
                 if (obj.Point() == null) continue; //Checks that object is a point
                 Point3d point = obj.Point().Location;
-                Reinforcement reinf = new Reinforcement(ProjectPlugIn.Instance.CurrentBeam)
+                Reinforcement reinf = new Reinforcement(ProjectPlugIn.Instance.CurrentBeam.CrossSec)
                 {
                     Material = new SteelMaterial(mName,SteelType.Reinforcement, ProjectPlugIn.Instance.CurrentBeam),
                     Centroid = point,

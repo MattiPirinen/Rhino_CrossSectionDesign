@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CrossSectionDesign</RootNamespace>
     <AssemblyName>CrossSectionDesign</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
@@ -27,6 +27,7 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug32|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -54,6 +55,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Dlubal.RFEM5, Version=5.3.0.0, Culture=neutral, PublicKeyToken=f22b2f92593d105e, processorArchitecture=MSIL">
@@ -97,12 +99,15 @@
       <DependentUpon>ChooseColumnsForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Classes and structures\Beam.cs" />
+    <Compile Include="Classes and structures\BoarderNeighbor.cs" />
     <Compile Include="Classes and structures\CircleCrossSection.cs" />
     <Compile Include="Classes and structures\ClimateCondition.cs" />
     <Compile Include="Classes and structures\Column.cs" />
     <Compile Include="Classes and structures\ColLoadCase.cs" />
     <Compile Include="Classes and structures\ColumnCalculationSettings.cs" />
     <Compile Include="Classes and structures\CrackWidthCalculation.cs" />
+    <Compile Include="Classes and structures\FaceNeighbor.cs" />
+    <Compile Include="Classes and structures\InspectionPoint.cs" />
     <Compile Include="Classes and structures\UserDataList.cs" />
     <Compile Include="Classes and structures\LoadCase.cs" />
     <Compile Include="Classes and structures\ColLoadCaseDirection.cs" />
@@ -123,9 +128,12 @@
     <Compile Include="ClimateConditionsForm.Designer.cs">
       <DependentUpon>ClimateConditionsForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Display classes\InspectionPointConduit.cs" />
+    <Compile Include="Display classes\CursorConduit.cs" />
     <Compile Include="Display classes\ColorScaleDisplay.cs" />
     <Compile Include="Display classes\GeometryConduit.cs" />
     <Compile Include="Display classes\LocalAxisConduit.cs" />
+    <Compile Include="Display classes\HeatFlowConduit.cs" />
     <Compile Include="Display classes\ResultConduit.cs" />
     <Compile Include="Enumerates\Axis.cs" />
     <Compile Include="Enumerates\CalcMethod.cs" />
@@ -133,6 +141,12 @@
     <Compile Include="Enumerates\ExposureClass.cs" />
     <Compile Include="Enumerates\LimitState.cs" />
     <Compile Include="Enumerates\Moment.cs" />
+    <Compile Include="HeatFlowForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="HeatFlowForm.Designer.cs">
+      <DependentUpon>HeatFlowForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="MainPanelMainTab.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -162,15 +176,12 @@
     <Compile Include="Classes and structures\CrossSection.cs" />
     <Compile Include="Static classes\CurveAndBrepManipulation.cs" />
     <Compile Include="Display classes\BackgroundConduit.cs" />
-    <Compile Include="Display classes\DivisionConduit.cs" />
     <Compile Include="Classes and structures\GeometryLarge.cs" />
-    <Compile Include="Classes and structures\GeometrySegment.cs" />
     <Compile Include="Classes and structures\HSL2RGB.cs" />
     <Compile Include="Interfaces\ICalcGeometry.cs" />
     <Compile Include="RhinoCommands\lockLayer.cs" />
     <Compile Include="Abstract classes\Material.cs" />
     <Compile Include="Enumerates\MaterialType.cs" />
-    <Compile Include="Display classes\MyConduit.cs" />
     <Compile Include="Display classes\CrackWidthConduit.cs" />
     <Compile Include="RhinoCommands\OpenMainPanel.cs" />
     <Compile Include="Classes and structures\ProjectPlugIn.cs" />
@@ -232,6 +243,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="ClimateConditionsForm.resx">
       <DependentUpon>ClimateConditionsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="HeatFlowForm.resx">
+      <DependentUpon>HeatFlowForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainPanel.resx">
       <DependentUpon>MainPanel.cs</DependentUpon>
@@ -299,6 +313,7 @@ Erase "$(TargetPath)"</PostBuildEvent>
     </StartArguments>
     <StartAction>Program</StartAction>
     <StartProgram>C:\Program Files (x86)\Rhinoceros 5.0\System\Rhino4.exe</StartProgram>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <FallbackCulture>en-US</FallbackCulture>
@@ -308,5 +323,6 @@ Erase "$(TargetPath)"</PostBuildEvent>
     <StartArguments>
     </StartArguments>
     <StartAction>Program</StartAction>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
 </Project>

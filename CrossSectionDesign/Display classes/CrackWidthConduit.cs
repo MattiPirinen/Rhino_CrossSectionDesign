@@ -31,19 +31,24 @@ namespace CrossSectionDesign.Display_classes
 
             if (ProjectPlugIn.Instance.CurrentBeam != null)
             {
+                
+
                 Beam b = ProjectPlugIn.Instance.CurrentBeam;
                 if (b.CurrentLoadCase == null) return;
                 CrossSection cs = ProjectPlugIn.Instance.CurrentBeam.CrossSec;
+                Transform tr = Transform.Scale(cs.AddingCentroid, 1.0 / ProjectPlugIn.Instance.Unitfactor);
 
                 if (b.CurrentLoadCase != null && b.CurrentLoadCase.GetType() == typeof(SimpleLoadCase))
                 {
                     double crackwidth = ((SimpleLoadCase)b.CurrentLoadCase).CrackWidthCalc.CrackWidth;
-                    Point3d location = ((SimpleLoadCase)b.CurrentLoadCase).CrackWidthCalc.CrackPoint;
+                    Point3d location = new Point3d( ((SimpleLoadCase)b.CurrentLoadCase).CrackWidthCalc.CrackPoint);
+                    location.Transform(tr);
                     BoundingBox bb = b.CrossSec.GetBoundingBox(Plane.WorldXY);
+                    bb.Transform(tr);
                     double size = bb.Diagonal.Length;
 
                     e.Display.DrawCircle(new Circle(location, size / 60), Color.Red);
-                    e.Display.Draw3dText(new Text3d(Math.Round(crackwidth,3).ToString()+ " mm",
+                    e.Display.Draw3dText(new Text3d(Math.Round(crackwidth*Math.Pow(10,3),3).ToString()+ " mm",
                         new Plane(location+ new Point3d(size/50,0,0),Vector3d.ZAxis), size / 50), System.Drawing.Color.Red);
 
 

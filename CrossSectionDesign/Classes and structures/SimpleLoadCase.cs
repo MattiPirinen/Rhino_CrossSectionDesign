@@ -18,6 +18,7 @@ namespace CrossSectionDesign.Classes_and_structures
         public CrackWidthCalculation CrackWidthCalc { get; set; }
 
 
+
         public SimpleLoadCase(double n_Ed, double m_Edz,double m_Edy, Beam b, string name, LimitState ls)
         {
             Ls = ls;
@@ -62,7 +63,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
         private Point3d FindMaxM(Curve c, Plane p)
         {
-            CurveIntersections ci = Intersection.CurvePlane(c, p, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            CurveIntersections ci = Intersection.CurvePlane(c, p, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
             if (ci == null) return new Point3d(0.1,0.1,0);
             List<Point3d> points = new List<Point3d>();
             foreach (IntersectionEvent ie in ci)

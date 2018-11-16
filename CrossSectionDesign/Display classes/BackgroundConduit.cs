@@ -31,7 +31,7 @@ namespace CrossSectionDesign.Display_classes
         {
             List<Brep> reinforcement = new List<Brep>();
             List<Brep> selected = new List<Brep>();
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -40,9 +40,12 @@ namespace CrossSectionDesign.Display_classes
                     
                     Reinforcement tempValue = list.Find(typeof(Reinforcement)) as Reinforcement;
                     if (tempValue != null && tempValue.Selected)
-                        selected.Add(tempValue.BrepGeometry);
+                    {
+                        selected.Add(tempValue.GetModelUnitBrep());
+                    }
+                        
                     else
-                        reinforcement.Add(tempValue.BrepGeometry);
+                        reinforcement.Add(tempValue.GetModelUnitBrep());
                 }
                      
             }
@@ -59,7 +62,7 @@ namespace CrossSectionDesign.Display_classes
             List<Brep> steelBreps = new List<Brep>();
             List<Brep> selectedBreps = new List<Brep>();
 
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -68,11 +71,11 @@ namespace CrossSectionDesign.Display_classes
                     temp = list.Find(typeof(RectangleGeometryLarge)) as GeometryLarge;
 
                 if (temp != null && temp.Selected == true)
-                    selectedBreps.Add(temp.BaseBrep);
+                    selectedBreps.Add(temp.GetModelUnitBrep());
                 else if (temp != null && temp.Material.GetType() == typeof(ConcreteMaterial))
-                    concreteBreps.Add(temp.BaseBrep);
+                    concreteBreps.Add(temp.GetModelUnitBrep());
                 else if (temp != null && temp.Material.GetType() == typeof(SteelMaterial))
-                    steelBreps.Add(temp.BaseBrep);
+                    steelBreps.Add(temp.GetModelUnitBrep());
                 
                     
                     

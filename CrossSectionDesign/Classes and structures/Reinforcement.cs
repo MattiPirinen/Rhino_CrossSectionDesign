@@ -19,15 +19,17 @@ namespace CrossSectionDesign.Classes_and_structures
         //Private variables
         private double _diameter;
         private Mesh _resultMesh;
+        private Point3d _centroid;
 
         public double Stress { get; set; }
 
         //Properties
         public int CroSecId { get; set; }
-        public Point3d Centroid { get; set; }
+        public Point3d Centroid { get => _centroid; set { value.Transform(UnitTransform); _centroid = value; } }
         public Material Material { get; set; }
         public double Area { get; private set; }
-        public Beam OwnerBeam { get; private set; }
+        public CrossSection OwnerCrossSection { get; set; }
+
 
         public double Diameter
         {
@@ -35,13 +37,10 @@ namespace CrossSectionDesign.Classes_and_structures
             set
             {
                 _diameter = value;
-                OutLine = new Circle(Centroid, _diameter*Math.Pow(10,3) / 2).ToNurbsCurve();
-                Area = Math.PI * Math.Pow(_diameter * Math.Pow(10,3), 2) / 4;
+                OutLine = new Circle(Centroid, _diameter / 2).ToNurbsCurve();
+                Area = Math.PI * Math.Pow(_diameter, 2) / 4;
                 BrepGeometry = Brep.CreatePlanarBreps(OutLine)[0];
-
                 CreateMesh();
-
-
             }
         }
 
@@ -52,9 +51,9 @@ namespace CrossSectionDesign.Classes_and_structures
                 SimplePlanes = false,
                 //GridMaxCount = 4,
                 //GridMinCount = 4,
-                MinimumEdgeLength = Diameter * Math.Pow(10, 3) / 4,
-                MaximumEdgeLength = Diameter * Math.Pow(10, 3) / 3
-        };
+                MinimumEdgeLength = Diameter  / 4,
+                MaximumEdgeLength = Diameter  / 3
+            };
 
 
             GeometryMesh = Mesh.CreateFromBrep(BrepGeometry, mp)[0];
@@ -62,9 +61,12 @@ namespace CrossSectionDesign.Classes_and_structures
 
         public Curve OutLine { get; set; }
 
-        public Reinforcement(Beam ownerBeam)
+        public Reinforcement(CrossSection ownerCrossSection)
         {
-            OwnerBeam = ownerBeam;
+            UnitTransform = Transform.Scale(ownerCrossSection.AddingCentroid, ProjectPlugIn.Instance.Unitfactor);
+            InverseUnitTransform = Transform.Scale(ownerCrossSection.AddingCentroid, 1/ProjectPlugIn.Instance.Unitfactor);
+
+            OwnerCrossSection = ownerCrossSection;
         }
 
         public Reinforcement()
@@ -72,10 +74,18 @@ namespace CrossSectionDesign.Classes_and_structures
 
         }
 
+        public Brep GetModelUnitBrep()
+        {
+            Brep b = BrepGeometry.DuplicateBrep();
+            b.Transform(InverseUnitTransform);
+            return b;
+        }
+
+
 
         public ICalcGeometry DeepCopy()
         {
-            Reinforcement rf = new Reinforcement(OwnerBeam)
+            Reinforcement rf = new Reinforcement(OwnerCrossSection)
             {
                 Diameter = Diameter,
                 Centroid = Centroid,
@@ -104,35 +114,33 @@ namespace CrossSectionDesign.Classes_and_structures
         {
             if (source is Reinforcement src)
             {
-                Centroid = src.Centroid;
-                _diameter = src._diameter;
-                OutLine = src.OutLine;
+                _centroid = src.Centroid;
+                Diameter = src._diameter;
             }
         }
 
         protected override bool Read(Rhino.FileIO.BinaryArchiveReader archive)
         {
             Rhino.Collections.ArchivableDictionary dict = archive.ReadDictionary();
-            Centroid = (Point3d)dict["Point"];
+            UnitTransform = (Transform)dict["UnitTransform"];
+            InverseUnitTransform = (Transform)dict["InverseUnitTransform"];
+            _centroid = (Point3d)dict["Point"];
             Diameter = (double)dict["Diameter"];
             Id = (int)dict["Id"];
             //TODO add a coorect material assignment
-            Beam ownerBeam = ProjectPlugIn.Instance.Beams.Find(o => o.Id == dict.GetInteger("BeamId"));
 
-            Material = new SteelMaterial((string)dict["MaterialName"], SteelType.Reinforcement, ownerBeam);
+            Material = new SteelMaterial((string)dict["MaterialName"], SteelType.Reinforcement, null);
             return true;
         }
 
         protected override bool Write(Rhino.FileIO.BinaryArchiveWriter archive)
         {
             var dict = new Rhino.Collections.ArchivableDictionary(20171031, "Values");
+            dict.Set("UnitTransform", UnitTransform);
+            dict.Set("InverseUnitTransform", InverseUnitTransform);
             dict.Set("Point", Centroid);
             dict.Set("Diameter", _diameter);
             dict.Set("Id", Id);
-            if (OwnerBeam != null)
-                dict.Set("BeamId", OwnerBeam.Id);
-            else
-                dict.Set("BeamId", -1);
             if (Material is SteelMaterial)
                 dict.Set("MaterialName", Material.StrengthClass);
             else
@@ -149,7 +157,15 @@ namespace CrossSectionDesign.Classes_and_structures
 
         public void ModifyMesh(double distance)
         {
-            _resultMesh =  MeshManipulationTools.CreateExtrudedMesh(GeometryMesh, Vector3d.ZAxis, distance);
+            _resultMesh = MeshManipulationTools.CreateExtrudedMesh(GeometryMesh, Vector3d.ZAxis, distance);
+        }
+
+        public Mesh GetModelScaleResultMesh()
+        {
+            Mesh m = ResultMesh.DuplicateMesh();
+            m.Transform(InverseUnitTransform);
+            return m;
+
         }
     }
 }

@@ -28,7 +28,9 @@ namespace CrossSectionDesign.Classes_and_structures
             SetMaterialValues();
         }
 
-
+        public override double HeatConductivity { get; set; } = 0.73;
+        public override double SpecificHeat { get; set; } = 880;
+        public override double Density { get; set; } = 2200;
         //COmpressive strength classes of cocnrete
         public static Dictionary<string, double> FckList = new Dictionary<string, double>()
         {

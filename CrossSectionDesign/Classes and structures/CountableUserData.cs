@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Rhino.Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +10,8 @@ namespace CrossSectionDesign.Classes_and_structures
     public class CountableUserData: Rhino.DocObjects.Custom.UserData
     {
         public bool Selected { get; set; }
-
+        public Transform UnitTransform { get; protected set; }
+        public Transform InverseUnitTransform { get; protected set; }
         protected static int _idCounter = 0;
         public int Id { get; protected set; }
 
@@ -28,6 +30,8 @@ namespace CrossSectionDesign.Classes_and_structures
         {
             return _idCounter;
         }
+
+        
 
 
     }

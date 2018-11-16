@@ -101,7 +101,7 @@ namespace CrossSectionDesign
             {
                 _projectPlugIn.CurrentBeam.CrossSec.MinAndMaxStress = Tuple.Create(min, max);
             }
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
 
         }
 
@@ -128,7 +128,7 @@ namespace CrossSectionDesign
             AddListeners();
 
 
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
             // Set the user control property on our plug-in
             ProjectPlugIn.Instance.MainForm = this;
 
@@ -243,9 +243,10 @@ namespace CrossSectionDesign
             temp.CrosecId = _projectPlugIn.CurrentBeam.CrossSec.Id;
             MaterialType type =
                 (MaterialType)Enum.Parse(typeof(MaterialType), comboBoxMaterialType.SelectedItem.ToString());
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
 
-            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover, 0).ToString();
+            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover/
+                _projectPlugIn.Unitfactor, 0).ToString();
         }
 
         private void buttonAddReinf_Click_1(object sender, EventArgs e)
@@ -263,8 +264,9 @@ namespace CrossSectionDesign
 
                 dataGridView_Reinforcement.Rows.Add(reinforcement.Id, "Reinforcement",reinforcement.Diameter*Math.Pow(10,3));
             }
-            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover, 0).ToString();
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover /
+                _projectPlugIn.Unitfactor, 0).ToString();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
 
@@ -382,7 +384,7 @@ namespace CrossSectionDesign
                     _projectPlugIn.CurrentBeam.CrossSec.CreateResultDisplay(true, lc);
                 else
                     _projectPlugIn.CurrentBeam.CrossSec.CreateResultDisplay(false, lc);
-                //brepsAndStrains.ForEach(o => RhinoDoc.ActiveDoc.Objects.AddBrep(o.Item1));
+                //brepsAndStrains.ForEach(o => ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(o.Item1));
 
                 //Update scale
                 textBox_cs_min.Enabled = true;
@@ -449,7 +451,7 @@ namespace CrossSectionDesign
                        _projectPlugIn.CurrentBeam.CrossSec.CreateResultDisplay(true, lc);
                     else
                        _projectPlugIn.CurrentBeam.CrossSec.CreateResultDisplay(false, lc);
-                    //brepsAndStrains.ForEach(o => RhinoDoc.ActiveDoc.Objects.AddBrep(o.Item1));
+                    //brepsAndStrains.ForEach(o => ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(o.Item1));
 
                     textBox_cs_min.Enabled = true;
                     textBox_cs_max.Enabled = true;
@@ -466,7 +468,7 @@ namespace CrossSectionDesign
 
                 }
 
-                RhinoDoc.ActiveDoc.Views.Redraw();
+                ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 RhinoApp.WriteLine("Time elapsed:" + elapsedMs.ToString() + "ms");
@@ -501,7 +503,7 @@ namespace CrossSectionDesign
                 UpdateResultDisplay();
                 _projectPlugIn.CurrentBeam.CrossSec.MaterialResultShown = radioButtonSteel.Checked ?
                     MaterialType.Steel : MaterialType.Concrete;
-                RhinoDoc.ActiveDoc.Views.Redraw();
+                ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
             }
             catch
             {
@@ -552,7 +554,7 @@ namespace CrossSectionDesign
                 int no = (int)d.Rows[row].Cells[0].Value;
                 if (material == "Reinforcement")
                 {
-                    RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+                    RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
                     foreach (RhinoObject rhinoObject in objs)
                     {
                         Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -572,7 +574,7 @@ namespace CrossSectionDesign
                 }
                 else
                 {
-                    RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+                    RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
                     foreach (RhinoObject rhinoObject in objs)
                     {
                         
@@ -581,11 +583,11 @@ namespace CrossSectionDesign
                         GeometryLarge tempGeom = list.Find(typeof(GeometryLarge)) as GeometryLarge;
                         if (tempGeom.Id == no)
                         {
-                            Layer l = RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
+                            Layer l = ProjectPlugIn.Instance.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
 
                             l.IsLocked = false;
                             l.CommitChanges();
-                            RhinoDoc.ActiveDoc.Objects.Delete(rhinoObject, true);
+                            ProjectPlugIn.Instance.ActiveDoc.Objects.Delete(rhinoObject, true);
                             l.IsLocked = true;
                             l.CommitChanges();
 
@@ -601,8 +603,9 @@ namespace CrossSectionDesign
 
             }
 
-            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover, 0).ToString();
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover / 
+                _projectPlugIn.Unitfactor, 0).ToString();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void OnlyHandleDigits(object sender, KeyPressEventArgs e)
@@ -681,7 +684,7 @@ namespace CrossSectionDesign
             int no = (int)d.Rows[row].Cells[0].Value;
             if (material == "Reinforcement")
             {
-                RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+                RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
                 foreach (RhinoObject rhinoObject in objs)
                 {
                     Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -689,14 +692,14 @@ namespace CrossSectionDesign
                     if (tempReinf.Id == no)
                     {
                         tempReinf.Selected = true;
-                        RhinoDoc.ActiveDoc.Views.Redraw();
+                        ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
                         return;
                     }
                 }
             }
             else
             {
-                RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+                RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
                 foreach (RhinoObject rhinoObject in objs)
                 {
                     Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -704,12 +707,12 @@ namespace CrossSectionDesign
                     if (tempGeom.Id == no)
                     {
                         tempGeom.Selected = true;
-                        RhinoDoc.ActiveDoc.Views.Redraw();
+                        ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
                         return;
                     }
                 }
             }
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void dataGridView_Geometry_CellLeave(object sender, DataGridViewCellEventArgs e)
@@ -723,7 +726,7 @@ namespace CrossSectionDesign
             int no = (int)d.Rows[row].Cells[0].Value;
             if (material == "Reinforcement")
             {
-                RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+                RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
                 foreach (RhinoObject rhinoObject in objs)
                 {
                     Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -731,14 +734,14 @@ namespace CrossSectionDesign
                     if (tempReinf.Id == no)
                     {
                         tempReinf.Selected = false;
-                        RhinoDoc.ActiveDoc.Views.Redraw();
+                        ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
                         return;
                     }
                 }
             }
             else
             {
-                RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+                RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
                 foreach (RhinoObject rhinoObject in objs)
                 {
                     Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -746,7 +749,7 @@ namespace CrossSectionDesign
                     if (tempGeom.Id == no)
                     {
                         tempGeom.Selected = false;
-                        RhinoDoc.ActiveDoc.Views.Redraw();
+                        ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
                         return;
                     }
                 }
@@ -819,7 +822,7 @@ namespace CrossSectionDesign
         private void checkBoxShowResults_CheckedChanged(object sender, EventArgs e)
         {
             ShowStressResults(checkBoxShowStresses.Checked);
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private void ShowStressResults(bool show)
@@ -829,15 +832,10 @@ namespace CrossSectionDesign
             _projectPlugIn.ColorScaleDisplay.Enabled = show;
         }
 
-        private void groupBox5_Enter(object sender, EventArgs e)
-        {
-
-        }
-
         private void checkBoxShowCrackWidth_CheckedChanged(object sender, EventArgs e)
         {
             _projectPlugIn.CrackWidthConduit.Enabled = checkBoxShowCrackWidth.Checked;
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
         }
 
         private bool UpdateFreeFormClimateConditions()
@@ -861,16 +859,16 @@ namespace CrossSectionDesign
 
         private void button1_Click(object sender, EventArgs e)
         {
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
             foreach (RhinoObject rhinoObject in objs)
             {
-                RhinoDoc.ActiveDoc.Objects.Delete(rhinoObject,true);
+                ProjectPlugIn.Instance.ActiveDoc.Objects.Delete(rhinoObject,true);
             }
 
-            objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+            objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
             foreach (RhinoObject rhinoObject in objs)
             {
-                RhinoDoc.ActiveDoc.Objects.Delete(rhinoObject, true);
+                ProjectPlugIn.Instance.ActiveDoc.Objects.Delete(rhinoObject, true);
             }
 
         }
@@ -887,7 +885,7 @@ namespace CrossSectionDesign
                 try
                 {
                     oXL = (Excel.Application)
-                    System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                        System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
                 }
                 catch
                 {
@@ -902,7 +900,7 @@ namespace CrossSectionDesign
                 oWB = oXL.Workbooks.Add();
                 oXL.ScreenUpdating = false;
                 oSheet = (Excel.Worksheet)oWB.ActiveSheet;
-
+                oSheet.Name = "Cross section results";
                 if (_projectPlugIn.CurrentBeam.CurrentLoadCase.GetType() == typeof(SimpleLoadCase))
                     ((SimpleLoadCase)_projectPlugIn.CurrentBeam.CurrentLoadCase).CrackWidthCalc.ExportToExcel(oSheet ,oSheet.Range["A1"]);
                 oXL.ScreenUpdating = true;
@@ -920,5 +918,13 @@ namespace CrossSectionDesign
             }
             
         }
+
+        private void buttonOpenHeatFlow_Click(object sender, EventArgs e)
+        {
+            if (_projectPlugIn.HeatFlowForm == null)
+                _projectPlugIn.HeatFlowForm = new HeatFlowForm();
+            _projectPlugIn.HeatFlowForm.Show();
+        }
     }
+
 }

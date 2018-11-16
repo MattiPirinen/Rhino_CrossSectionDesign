@@ -13,16 +13,16 @@ namespace CrossSectionDesign.Static_classes
 {
     public static class TestCalculations
     {
-        
+
 
         public static void TestCalculation1()
         {
             ProjectPlugIn ppi = ProjectPlugIn.Instance;
 
-            
+
             CrossSection cs = ppi.CurrentBeam.CrossSec;
             Random rand = new Random();
-            LoadCase lc = new SimpleLoadCase(0,0,0,ppi.CurrentBeam,"sampleLoadCase",Enumerates.LimitState.Ultimate);
+            LoadCase lc = new SimpleLoadCase(0, 0, 0, ppi.CurrentBeam, "sampleLoadCase", Enumerates.LimitState.Ultimate);
 
 
             //Connect to excel
@@ -44,7 +44,7 @@ namespace CrossSectionDesign.Static_classes
 
                 LimitState ls = LimitState.Ultimate;
 
-                
+
                 oXL.Visible = true;
                 //Get a new workbook.
                 oWB = oXL.Workbooks.Add();
@@ -110,13 +110,13 @@ namespace CrossSectionDesign.Static_classes
 
                 for (int i = 0; i < iterationBoxes.Length; i++)
                 {
-                    
-                    oSheet.Cells[i + 5, 8] = $"{i*iterationSpace}-{(i+1)*iterationSpace}";
+
+                    oSheet.Cells[i + 5, 8] = $"{i * iterationSpace}-{(i + 1) * iterationSpace}";
                     oSheet.Cells[i + 5, 9] = iterationBoxes[i];
                 }
-                Excel.Range r = oSheet.Range[oSheet.Cells[3, 8], oSheet.Cells[14,9]];
+                Excel.Range r = oSheet.Range[oSheet.Cells[3, 8], oSheet.Cells[14, 9]];
                 //Creating chart for iterations
-                
+
                 Excel.ChartObjects xlCharts = (Excel.ChartObjects)oSheet.ChartObjects(Type.Missing);
                 Excel.ChartObject myChart = xlCharts.Add(10, 80, 300, 250);
                 Excel.Chart c = myChart.Chart;
@@ -132,7 +132,7 @@ namespace CrossSectionDesign.Static_classes
                 oSheet.Cells[18, 9].Value = "Count";
                 for (int i = 0; i < iterationBoxes.Length; i++)
                 {
-                    oSheet.Cells[i + 19, 8] = $"{ i* repeatSpace}-{( i + 1 )* repeatSpace}";
+                    oSheet.Cells[i + 19, 8] = $"{ i * repeatSpace}-{(i + 1) * repeatSpace}";
                     oSheet.Cells[i + 19, 9] = repeatBoxes[i];
                 }
 
@@ -159,14 +159,76 @@ namespace CrossSectionDesign.Static_classes
                 errorMessage = string.Concat(errorMessage, " Line: ");
                 errorMessage = string.Concat(errorMessage, theException.Source);
                 MessageBox.Show(errorMessage, "Error");
-                
+
             }
-            
+
 
         }
 
 
+        public static List<Tuple<double,double>> HeatConductionTest(double ldif_1)
+        {
+            double A = 1;
+            double gamma = 880;
+            double K = 0.73;
+            double roo = 2200;
+            double ldif = ldif_1;
+            double ltot = 0.1;
+            double Tini = 100;
+            double t0 = 0;
+            List<Slice> slices = new List<Slice>();
+            double timeStep = 10;
+            List<Tuple<double, double>> SamplePointValues = new List<Tuple<double, double>>();
+            for (double i = 0; isApproxSmallerThan(i,ltot,0.00001); i+= ldif)
+            {
+                slices.Add(new Slice(i, i + ldif, 0));
+            }
+            SamplePointValues.Add(Tuple.Create(0.0, slices[slices.Count - 1].T));
+            for (int i = 0; i < 10000; i++)
+            {
+                List<double> temps = new List<double>();
+                for (int k = 0; k < slices.Count; k++)
+                {
+                    double heatDiff = 0;
+                    if (k == 0)
+                        heatDiff += (Tini-slices[k].T) * K * A / (ldif/2)* timeStep;
+                    else
+                        heatDiff += (slices[k -1].T - slices[k].T) * K * A / ldif* timeStep;
+                    if (k != slices.Count-1)
+                        heatDiff += (slices[k + 1].T - slices[k].T) * K * A / ldif*timeStep;
 
+                    temps.Add(slices[k].T + heatDiff / (roo * A * gamma * ldif));
+                }
+                for (int k = 0; k < slices.Count; k++)
+                {
+                    slices[k].T = temps[k];
+                }
+                SamplePointValues.Add(Tuple.Create(timeStep*i, slices[slices.Count - 1].T));
+
+            }
+            return SamplePointValues;
+
+        }
+
+        private static bool isApproxSmallerThan(double i, double ltot, double v)
+        {
+            return (ltot - i) > v; 
+        }
+
+        private class Slice
+        {
+            public double StartPos;
+            public double EndPos;
+            public double T;
+            
+            public Slice(double startPos, double endPos, double t)
+            {
+                StartPos = startPos;
+                EndPos = endPos;
+                t = T;
+            }
+
+        }
 
     }
 }

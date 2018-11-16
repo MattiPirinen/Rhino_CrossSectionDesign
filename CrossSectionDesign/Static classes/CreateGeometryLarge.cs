@@ -18,7 +18,7 @@ namespace CrossSectionDesign.Static_classes
 
         {
 
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
 
             //Allow user to pick multiple objects
             const Rhino.DocObjects.ObjectType geometryFilter = Rhino.DocObjects.ObjectType.Curve;
@@ -136,7 +136,7 @@ namespace CrossSectionDesign.Static_classes
         {
             Brep brep1 = Brep.CreatePlanarBreps(new[] { curve1 })[0];
             Brep brep2 = Brep.CreatePlanarBreps(new[] { curve2 })[0];
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
             double area = Brep.CreateBooleanUnion(new[] { brep1, brep2 }, 0.001)[0].GetArea();
             double brep1Area = brep1.GetArea();
             double brep2Area = brep2.GetArea();
@@ -192,12 +192,16 @@ namespace CrossSectionDesign.Static_classes
             attr.SetUserString("infType", "GeometryLarge");
             GetLayerIndex(mType,ref attr);
 
-            GeometryLarge seg = new GeometryLarge(mType, mName, brep, ProjectPlugIn.Instance.CurrentBeam)
-            { BaseCurves = baseCurves };
+            GeometryLarge seg = new GeometryLarge(mType, mName, brep, ProjectPlugIn.Instance.CurrentBeam.CrossSec);
+            foreach (Curve curve in baseCurves)
+            {
+                curve.Transform(seg.UnitTransform);
+                seg.BaseCurves.Add(curve);
+            }
+
             attr.UserData.Add(seg);
-            Guid guid = doc.Objects.AddBrep(brep);
+            Guid guid = doc.Objects.AddBrep(seg.GetModelUnitBrep());
             doc.Objects.ModifyAttributes(guid, attr, true);
-            //doc.Objects.AddBrep(brep, attr);
 
             return seg;
 
@@ -205,7 +209,7 @@ namespace CrossSectionDesign.Static_classes
 
         public static void GetLayerIndex(MaterialType mType, ref ObjectAttributes attr)
         {
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            RhinoDoc doc = ProjectPlugIn.Instance.ActiveDoc;
 
             List<Layer> layers = (from layer in doc.Layers
                 where layer.Name == Enum.GetName(typeof(MaterialType), mType)

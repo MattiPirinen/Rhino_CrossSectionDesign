@@ -9,12 +9,12 @@ using Rhino.Geometry;
 
 namespace CrossSectionDesign.Display_classes
 {
-    public class ResultConduit: Rhino.Display.DisplayConduit
+    public class HeatFlowConduit: Rhino.Display.DisplayConduit
     {
         public bool ForceMaxAndMin { get; set; } = false;
 
 
-        public ResultConduit()
+        public HeatFlowConduit()
         {
         }
 
@@ -59,47 +59,24 @@ namespace CrossSectionDesign.Display_classes
 
             if (ProjectPlugIn.Instance.CurrentBeam != null)
             {
+
+                double minValue = 0;
+                double maxValue = 100;
+
                 Beam b = ProjectPlugIn.Instance.CurrentBeam;
-                if (b.CurrentLoadCase == null) return;
                 CrossSection cs = ProjectPlugIn.Instance.CurrentBeam.CrossSec;
                 List<ICalcGeometry> calcGeometries = new List<ICalcGeometry>();
-                calcGeometries.AddRange(cs.GetReinforcements());
+
                 List<GeometryLarge> glList = cs.GetGeometryLarges();
-                glList.ForEach(gl => calcGeometries.AddRange(gl.CalcMesh.MeshSegments));
+                if (glList.Count != 1)
+                    return;
 
-                Tuple<double, double> minAndMax = cs.MinAndMaxStress ?? Tuple.Create(0.0, 0.0);
+                glList[0].CalcMesh.CalculateVertexColors(0.0,101.0);
+                Mesh calcMesh = new Mesh();
+                calcMesh.CopyFrom(glList[0].CalcMesh);
 
-                double minValue = minAndMax.Item1;
-                double maxValue = minAndMax.Item2;
-
-                foreach (ICalcGeometry icalcG in calcGeometries)
-                {
-                    if (b.CrossSec.MaterialResultShown == Enumerates.MaterialType.Concrete &&
-                        icalcG.Material.GetType() == typeof(ConcreteMaterial) ||
-                        b.CrossSec.MaterialResultShown == Enumerates.MaterialType.Steel &&
-                        icalcG.Material.GetType() == typeof(SteelMaterial))
-                    {
-                        ColorRGB color;
-                        Mesh m = icalcG.GetModelScaleResultMesh();
-                        if (m == null) continue;
-                        double value = 0.7 - 0.7 * (icalcG.Stresses[b.CurrentLoadCase] - minValue) / (maxValue - minValue);
-                        if (value < 0 || value > 0.7)
-                            color = Utils.HSL2RGB(1, 1, 1);
-                        else
-                            color = Utils.HSL2RGB(value, 1, 0.5);
-                        
-                        m.VertexColors.Clear();
-                        for (int k = 0; k < m.Vertices.Count; k++)
-                        {
-                            m.VertexColors.Add(color);
-                        }
-                        e.Display.DrawMeshFalseColors(m);
-
-                    }
-
-
-                }
-
+                calcMesh.Transform(ProjectPlugIn.Instance.CurrentBeam.CrossSec.InverseUnitTransform);
+                e.Display.DrawMeshFalseColors(calcMesh);
             }
 
 

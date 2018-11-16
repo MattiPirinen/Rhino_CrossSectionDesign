@@ -262,7 +262,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
         private Point3d FindMaxMTemp(Curve c, Plane p)
         {
-            CurveIntersections ci = Intersection.CurvePlane(c, p, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            CurveIntersections ci = Intersection.CurvePlane(c, p, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
             if (ci == null) return new Point3d(0.1, 0.1, 0);
             List<Point3d> points = new List<Point3d>();
             foreach (IntersectionEvent ie in ci)
@@ -275,7 +275,7 @@ namespace CrossSectionDesign.Classes_and_structures
         private double FindMaxM(Curve c, Plane p, Axis direction)
         {
             
-            CurveIntersections ci = Intersection.CurvePlane(c,p, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            CurveIntersections ci = Intersection.CurvePlane(c,p, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
             if (ci == null) return 0.1;
             List<Point3d> points = new List<Point3d>();
             foreach (IntersectionEvent ie in ci)

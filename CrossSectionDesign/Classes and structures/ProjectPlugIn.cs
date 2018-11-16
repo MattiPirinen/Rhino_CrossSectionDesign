@@ -9,6 +9,7 @@ using Rhino.Collections;
 using Rhino.DocObjects;
 using Rhino.FileIO;
 using Rhino.Geometry;
+using Rhino.Input.Custom;
 using Rhino.PlugIns;
 
 
@@ -28,13 +29,17 @@ namespace CrossSectionDesign.Classes_and_structures
 
         public int SelectedBeamIndex { get; set; }
         public LocalAxisConduit LocalAxisConduit { get; set; }
-        public DivisionConduit DivisionConduit { get; set; }
         public BackGroundConduit BackGroundConduit { get; set; }
         public ResultConduit ResultConduit { get; set; }
         public ColorScaleDisplay ColorScaleDisplay { get; set; }
         public GeometryConduit GeomConduit { get; set; }
         public ResultConduit ColumnResultConduit { get; set; }
         public CrackWidthConduit CrackWidthConduit { get; set; }
+        public HeatFlowConduit HeatFlowConduit { get; set; }
+        public RhinoDoc ActiveDoc { get; private set; }
+        public CursorConduit CursorConduit { get; set; }
+        public InspectionPointConduit InspectionPointConduit { get; set; }
+
 
         public double Unitfactor { get; set; }
 
@@ -63,6 +68,7 @@ namespace CrossSectionDesign.Classes_and_structures
             //System.Type panelType = typeof(MainPanel);
             //Rhino.UI.Panels.RegisterPanel(this, panelType, "Cross Section Design", System.Drawing.SystemIcons.WinLogo);
             return Rhino.PlugIns.LoadReturnCode.Success;
+            
         }
 
         //This function is overrided so that the plugin will save userdata
@@ -216,19 +222,21 @@ namespace CrossSectionDesign.Classes_and_structures
         {
             Beams.Clear();
             CurrentBeam = null;
-
-            if (unitfactors.ContainsKey(RhinoDoc.ActiveDoc.ModelUnitSystem))
-                Unitfactor = unitfactors[RhinoDoc.ActiveDoc.ModelUnitSystem];
+            ActiveDoc = RhinoDoc.ActiveDoc;
+            if (unitfactors.ContainsKey(ActiveDoc.ModelUnitSystem))
+            {
+                Unitfactor = unitfactors[ActiveDoc.ModelUnitSystem];
+                ActiveDoc.ModelAbsoluteTolerance = 0.0001;
+            }
             else
             {
                 MessageBox.Show("Cross section design tool does not support the chosen" +
                     "unit system. Unit system will be changed to millimeters.");
-                RhinoDoc.ActiveDoc.ModelUnitSystem = UnitSystem.Millimeters;
-                Unitfactor = unitfactors[RhinoDoc.ActiveDoc.ModelUnitSystem];
+                ActiveDoc.ModelUnitSystem = UnitSystem.Millimeters;
+                ActiveDoc.ModelAbsoluteTolerance = 0.0001;
+                Unitfactor = unitfactors[ActiveDoc.ModelUnitSystem];
             }
                 
-
-
 
             try
             {
@@ -266,9 +274,6 @@ namespace CrossSectionDesign.Classes_and_structures
                             dict.GetBool("ColumnCalculationSettings3" + i);
                         ((Column)bTemp).ColumnCalcSettings.ColumnCalMethod[ColumnCalculationMethod.NominalStiffness2] =
                             dict.GetBool("ColumnCalculationSettings4" + i);
-
-
-
                     }
                     else
                     {
@@ -340,7 +345,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
                     List<Reinforcement> temp = GetReinforcements(reinforcements);
                     temp.ForEach(o => o.Material.Bm = bTemp);
-
+                    temp.ForEach(o => o.OwnerCrossSection = cTemp);
 
 
                     //Sets a link between geometry larges and the beam
@@ -348,7 +353,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
                     List<GeometryLarge> gls = GetGeometryLarges(geometryLarges);
                     gls.ForEach(o => o.Material.Bm = bTemp);
-
+                    gls.ForEach(o => o.OwnerCrossSection = cTemp);
 
                     cTemp.ConcreteMaterial = new ConcreteMaterial((string)dict["ConcreteStrenghtClass" + i], bTemp);
                     bTemp.CrossSec = cTemp;
@@ -447,7 +452,7 @@ namespace CrossSectionDesign.Classes_and_structures
         private List<GeometryLarge> GetGeometryLarges(List<int> GeometryLargeIds)
         {
             List<GeometryLarge> geometryLarges = new List<GeometryLarge>();
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "GeometryLarge", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -468,7 +473,7 @@ namespace CrossSectionDesign.Classes_and_structures
         public List<Reinforcement> GetReinforcements(List<int> ReinforementIds)
         {
             List<Reinforcement> temp = new List<Reinforcement>();
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
+            RhinoObject[] objs = ProjectPlugIn.Instance.ActiveDoc.Objects.FindByUserString("infType", "Reinforcement", true);
             foreach (RhinoObject rhinoObject in objs)
             {
                 Rhino.DocObjects.Custom.UserDataList list = rhinoObject.Attributes.UserData;
@@ -479,7 +484,31 @@ namespace CrossSectionDesign.Classes_and_structures
             return temp;
         }
 
+        private void onActiveDocumentChanged(object sender, DocumentEventArgs e)
+        {
+            ActiveDoc = RhinoDoc.ActiveDoc;
 
+            if (unitfactors.ContainsKey(ActiveDoc.ModelUnitSystem))
+            {
+                Unitfactor = unitfactors[ActiveDoc.ModelUnitSystem];
+                ActiveDoc.ModelAbsoluteTolerance = 0.0001;
+            }
+            else
+            {
+                MessageBox.Show("Cross section design tool does not support the chosen" +
+                    "unit system. Unit system will be changed to millimeters.");
+                ActiveDoc.ModelUnitSystem = UnitSystem.Millimeters;
+                ActiveDoc.ModelAbsoluteTolerance = 0.0001;
+                Unitfactor = unitfactors[ActiveDoc.ModelUnitSystem];
+            }
+        }
+
+        private void onMouseMoved(object sender, GetPointMouseEventArgs e)
+        {
+            
+            CursorConduit.text =e.Point.ToString();
+            ActiveDoc.Views.Redraw();
+        }
 
 
         private List<Brep> GetConcreteBreps()
@@ -503,21 +532,28 @@ namespace CrossSectionDesign.Classes_and_structures
             }
             return brepList;
         }
-
+        private GetPoint gp;
 
         /// <summary>
         /// Public constructor
         /// </summary>
         public ProjectPlugIn()
         {
+            RhinoDoc.EndOpenDocument += onActiveDocumentChanged;
+            RhinoDoc.NewDocument += onActiveDocumentChanged;
+            gp = new GetPoint();
+            gp.MouseMove += onMouseMoved;
+
+
             Instance = this;
-            DivisionConduit = new DivisionConduit() { Enabled = true };
             BackGroundConduit = new BackGroundConduit() { Enabled = true };
             ResultConduit = new ResultConduit() { Enabled = true };
             LocalAxisConduit = new LocalAxisConduit(this) { Enabled = true };
             ColorScaleDisplay = new ColorScaleDisplay();
-            CrackWidthConduit = new CrackWidthConduit() { Enabled = true};
-
+            CrackWidthConduit = new CrackWidthConduit() { Enabled = true };
+            HeatFlowConduit = new HeatFlowConduit() { Enabled = true };
+            CursorConduit = new CursorConduit() { Enabled = true };
+            InspectionPointConduit = new InspectionPointConduit() { Enabled = false };
             RhinoApp.Idle += OnIdle; // subcribe;
         }
 
@@ -545,13 +581,13 @@ namespace CrossSectionDesign.Classes_and_structures
             get;
             set;
         }
-
+        public HeatFlowForm HeatFlowForm { get; set; }
         public RFEMAnalysisForm RFEMForm { get; set; }
         public ClimateConditionsForm ClimateForm {get;set;}
         public ChooseColumnsForm ChooseColForm { get; set; }
         public ChartForm ChForm { get; set; }
         public List<Tuple<int,Brep>> beamBreps = new List<Tuple<int,Brep>>();
-
+        
         public override PlugInLoadTime LoadTime { get { return PlugInLoadTime.AtStartup; } }
 
 

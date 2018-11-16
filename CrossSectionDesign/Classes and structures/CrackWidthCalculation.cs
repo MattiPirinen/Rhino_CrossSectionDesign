@@ -7,6 +7,10 @@ using System.Text;
 using Rhino.Geometry.Intersect;
 using Excel = Microsoft.Office.Interop.Excel;
 using CrossSectionDesign.Static_classes;
+using Rhino.Display;
+using System.Drawing;
+using System.Windows.Forms;
+using CrossSectionDesign.Enumerates;
 
 namespace CrossSectionDesign.Classes_and_structures
 {
@@ -90,7 +94,7 @@ namespace CrossSectionDesign.Classes_and_structures
                 Vector3d transV = Vector3d.YAxis * distance;
                 transV.Transform(Transform.PlaneToPlane(Plane.WorldXY, pl));
                 cutPlane.Translate(transV);
-                breps = concrete.Trim(cutPlane, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                breps = concrete.Trim(cutPlane, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
             }
                 
             else
@@ -102,7 +106,7 @@ namespace CrossSectionDesign.Classes_and_structures
                 Vector3d transV = -Vector3d.YAxis * distance;
                 transV.Transform(Transform.PlaneToPlane(Plane.WorldXY, pl));
                 cutPlane.Translate(transV);
-                breps = concrete.Trim(cutPlane, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                breps = concrete.Trim(cutPlane, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
             }
 
             foreach (Brep brep in breps)
@@ -139,16 +143,22 @@ namespace CrossSectionDesign.Classes_and_structures
             PointCloud pc = new PointCloud(reinfCents);
 
             double distanceSum = 0;
-
-            for (int s = 0; s < pc.Count; s++)
+            if (pc.Count > 1)
             {
-                Point3d point = pc[0].Location;
-                pc.RemoveAt(0);
-                distanceSum += new Vector3d(point - pc[pc.ClosestPoint(point)].Location).Length;
-                pc.Add(point);
+                for (int s = 0; s < pc.Count; s++)
+                {
+                    Point3d point = pc[0].Location;
+                    pc.RemoveAt(0);
+                    distanceSum += new Vector3d(point - pc[pc.ClosestPoint(point)].Location).Length;
+                    pc.Add(point);
+                }
+                W = distanceSum / pc.Count;
             }
+            else
+                W = 0.01;
+
             //Average distance between reinforcements
-            W = distanceSum / pc.Count;
+
 
 
             //TODO Needs to add a question is the loading before or after 28days from the cast.
@@ -175,10 +185,10 @@ namespace CrossSectionDesign.Classes_and_structures
             tensReinf.ForEach(r => bottom += r.Diameter);
             Diameter_Eq = top / bottom;
 
-            if (W < 5 * (HostBeam.CrossSec.ConcreteCover*Math.Pow(10,3) + Diameter_Eq*Math.Pow(10,3) / 2))
-                s_r_max = k3 * HostBeam.CrossSec.ConcreteCover * Math.Pow(10, 3) + k1 * k2 * k4 * Diameter_Eq * Math.Pow(10, 3) / roo_p_eff;
+            if (W < 5 * (HostBeam.CrossSec.ConcreteCover + Diameter_Eq/ 2))
+                s_r_max = k3 * HostBeam.CrossSec.ConcreteCover + k1 * k2 * k4 * Diameter_Eq / roo_p_eff;
             else
-                s_r_max = 1.3 * H * X;
+                s_r_max = 1.3 * (H - X);
 
             CrackWidth = s_r_max * StrainDiff;
 
@@ -198,7 +208,7 @@ namespace CrossSectionDesign.Classes_and_structures
 
             botLine.Transform(Transform.PlaneToPlane( Plane.WorldXY, pl));
 
-            Intersection.CurveBrep(botLine.ToNurbsCurve(), concrete, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,
+            Intersection.CurveBrep(botLine.ToNurbsCurve(), concrete, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance,
                 out Curve[] overlapCurves, out Point3d[] overlapPoints);
 
             if (overlapPoints.Length != 0)
@@ -250,15 +260,9 @@ namespace CrossSectionDesign.Classes_and_structures
         {
             if (r.Cells.Count == 0) return;
             Excel.Range rs = r.Cells[1, 1];
+
             int sRow = rs.Row;
             int sColumn = rs.Column;
-
-            
-
-
-
-            rs.Value = "Crack width calculation";
-            ExcelGlobalSettings.Title1Font(rs);
 
             int dColumn = 0;
             int syColumn = 1;
@@ -267,8 +271,6 @@ namespace CrossSectionDesign.Classes_and_structures
             int rColumn = 4;
 
 
-            int lcRow = sRow + 1;
-
             ws.Columns[sColumn + dColumn].ColumnWidth = 42;
             ws.Columns[sColumn + syColumn].ColumnWidth = 8;
             ws.Columns[sColumn + vColumn].ColumnWidth = 8;
@@ -276,17 +278,41 @@ namespace CrossSectionDesign.Classes_and_structures
             ws.Columns[sColumn + rColumn].ColumnWidth = 12;
 
 
+
+            RhinoView rw = ProjectPlugIn.Instance.ActiveDoc.Views.Find("Cross section view", false);
+            
+            BoundingBox bb = HostBeam.CrossSec.GetBoundingBox(Plane.WorldXY);
+            bb.Transform(HostBeam.CrossSec.InverseUnitTransform);
+            bb.Transform(Transform.Scale(bb.Center, 1.7));
+            rw.ActiveViewport.ZoomBoundingBox(bb);
+
+
+            Bitmap bm = rw.CaptureToBitmap(new Size(680, 680));
+            Clipboard.SetDataObject(bm);
+            
+            ws.Paste(r.Offset[2,0], false);
+            Excel.Shape picture = ws.Shapes.Item(ws.Shapes.Count);
+            picture.Width = 330;
+            picture.Height = 330;
+
+            rs.Value = "Crack width calculation";
+            ExcelGlobalSettings.Title1Font(rs);
+
+            int lcRow = sRow + 26;
             ws.Cells[lcRow, sColumn + dColumn].Value = "Load Case:";
             ws.Cells[lcRow, sColumn + vColumn].Value = LoadCase.Name;
 
-            int titleRow = lcRow + 2;
+            int loadTypeRow = lcRow+ 1;
+            ws.Cells[loadTypeRow, sColumn + dColumn].Value = "Limit State:";
+            ws.Cells[loadTypeRow, sColumn + vColumn].Value = GetLimitStateName(_loadCase.Ls);
 
+
+            int titleRow = loadTypeRow + 2;
+            
             Excel.Range firstCell = ws.Cells[titleRow, sColumn + dColumn];
             Excel.Range lastCell = ws.Cells[titleRow+20, sColumn + uColumn];
             Excel.Range normalRange = ws.Range[firstCell, lastCell];
             ExcelGlobalSettings.NormalFont(normalRange);
-
-
 
             ws.Cells[titleRow, sColumn + dColumn].Value = "Description";
             ws.Cells[titleRow, sColumn + syColumn].Value = "Symbol";
@@ -297,29 +323,50 @@ namespace CrossSectionDesign.Classes_and_structures
                 ws.Cells[titleRow, sColumn + rColumn]].Borders[Excel.XlBordersIndex.xlEdgeBottom].LineStyle 
                 = Excel.XlLineStyle.xlContinuous;
 
-            int heigthRow = titleRow + 1;
+            int fxRow = titleRow + 1;
+            ws.Cells[fxRow, sColumn + dColumn].Value = "Normal force";
+            ws.Cells[fxRow, sColumn + syColumn].Value = "Fx";
+            ws.Cells[fxRow, sColumn + syColumn].Characters[2, 1].Font.Subscript = true;
+            ws.Cells[fxRow, sColumn + vColumn].Value = Math.Round(_loadCase.N_Ed * Math.Pow(10, -3), 1);
+            ws.Cells[fxRow, sColumn + uColumn].Value = "kN";
+
+            int myRow = fxRow + 1;
+            ws.Cells[myRow, sColumn + dColumn].Value = "Moment around Y-axis";
+            ws.Cells[myRow, sColumn + syColumn].Value = "My";
+            ws.Cells[myRow, sColumn + syColumn].Characters[2, 1].Font.Subscript = true;
+            ws.Cells[myRow, sColumn + vColumn].Value = Math.Round(_loadCase.M_Edy * Math.Pow(10, -3), 1);
+            ws.Cells[myRow, sColumn + uColumn].Value = "kN";
+
+            int mzRow = myRow + 1;
+            ws.Cells[mzRow, sColumn + dColumn].Value = "Moment around Z-axis";
+            ws.Cells[mzRow, sColumn + syColumn].Value = "Mz";
+            ws.Cells[mzRow, sColumn + syColumn].Characters[2, 1].Font.Subscript = true;
+            ws.Cells[mzRow, sColumn + vColumn].Value = Math.Round(_loadCase.M_Edz * Math.Pow(10, -3), 1);
+            ws.Cells[mzRow, sColumn + uColumn].Value = "kN";
+
+            int heigthRow = mzRow + 2;
             ws.Cells[heigthRow, sColumn + dColumn].Value = "Cross section heigth:";
             ws.Cells[heigthRow, sColumn + syColumn].Value = "h";
-            ws.Cells[heigthRow, sColumn + vColumn].Value = Math.Round(H,0);
+            ws.Cells[heigthRow, sColumn + vColumn].Value = Math.Round(H* Math.Pow(10,3), 0);
             ws.Cells[heigthRow, sColumn + uColumn].Value = "mm";
 
             int effhRow = heigthRow + 1;
             ws.Cells[effhRow, sColumn + dColumn].Value = "Cross section effective heigth:";
             ws.Cells[effhRow, sColumn + syColumn].Value = "d";
-            ws.Cells[effhRow, sColumn + vColumn].Value = Math.Round(D,0);
+            ws.Cells[effhRow, sColumn + vColumn].Value = Math.Round(D * Math.Pow(10, 3), 0);
             ws.Cells[effhRow, sColumn + uColumn].Value = "mm";
 
             int xRow = effhRow + 1;
             ws.Cells[xRow, sColumn + dColumn].Value = "Compression zone heigth";
             ws.Cells[xRow, sColumn + syColumn].Value = "x";
-            ws.Cells[xRow, sColumn + vColumn].Value = Math.Round(X,0);
+            ws.Cells[xRow, sColumn + vColumn].Value = Math.Round(X * Math.Pow(10, 3), 0);
             ws.Cells[xRow, sColumn + uColumn].Value = "mm";
 
             int hcRow = xRow + 1;
             ws.Cells[hcRow, sColumn + dColumn].Value = "Effective Concrete tension zone heigth";
             ws.Cells[hcRow, sColumn + syColumn].Value = "hc,eff";
             ws.Cells[hcRow, sColumn + syColumn].Characters[2, 5].Font.Subscript = true;
-            ws.Cells[hcRow, sColumn + vColumn].Value = Math.Round(H_c_eff,0);
+            ws.Cells[hcRow, sColumn + vColumn].Value = Math.Round(H_c_eff * Math.Pow(10, 3), 0);
             ws.Cells[hcRow, sColumn + uColumn].Value = "mm";
             ws.Cells[hcRow, sColumn + rColumn].Value = "[1] (7.3.2(3))";
 
@@ -327,7 +374,7 @@ namespace CrossSectionDesign.Classes_and_structures
             ws.Cells[acRow, sColumn + dColumn].Value = "Effective Concrete tension zone area";
             ws.Cells[acRow, sColumn + syColumn].Value = "Ac,eff";
             ws.Cells[acRow, sColumn + syColumn].Characters[2, 5].Font.Subscript = true;
-            ws.Cells[acRow, sColumn + vColumn].Value = Math.Round(A_c_eff,0);
+            ws.Cells[acRow, sColumn + vColumn].Value = Math.Round(A_c_eff * Math.Pow(10, 6), 0);
             ws.Cells[acRow, sColumn + uColumn].Value = "mm2";
             ws.Cells[acRow, sColumn + uColumn].Characters[3, 1].Font.Superscript = true;
             ws.Cells[acRow, sColumn + rColumn].Value = "[1] 7.3.2(3)";
@@ -336,7 +383,7 @@ namespace CrossSectionDesign.Classes_and_structures
             ws.Cells[asRow, sColumn + dColumn].Value = "Effective tension reinforcement area";
             ws.Cells[asRow, sColumn + syColumn].Value = "As";
             ws.Cells[asRow, sColumn + syColumn].Characters[2, 1].Font.Subscript = true;
-            ws.Cells[asRow, sColumn + vColumn].Value = Math.Round(A_s,0);
+            ws.Cells[asRow, sColumn + vColumn].Value = Math.Round(A_s * Math.Pow(10, 6), 0);
             ws.Cells[asRow, sColumn + uColumn].Value = "mm2";
             ws.Cells[asRow, sColumn + uColumn].Characters[3, 1].Font.Superscript = true;
             
@@ -346,7 +393,7 @@ namespace CrossSectionDesign.Classes_and_structures
             ws.Cells[phiEfRow, sColumn + syColumn].Value = "Feq";
             ws.Cells[phiEfRow, sColumn + syColumn].Characters[1, 1].Font.Name = "GreekS";
             ws.Cells[phiEfRow, sColumn + syColumn].Characters[2, 2].Font.Subscript = true;
-            ws.Cells[phiEfRow, sColumn + vColumn].Value = Math.Round(Diameter_Eq,1);
+            ws.Cells[phiEfRow, sColumn + vColumn].Value = Math.Round(Diameter_Eq* Math.Pow(10, 3), 1);
             ws.Cells[phiEfRow, sColumn + uColumn].Value = "mm";
             ws.Cells[phiEfRow, sColumn + rColumn].Value = "[1] Eq. 7.12";
 
@@ -429,7 +476,7 @@ namespace CrossSectionDesign.Classes_and_structures
             ws.Cells[srRow, sColumn + dColumn].Value = "Crack spacing";
             ws.Cells[srRow, sColumn + syColumn].Value = "sr,max";
             ws.Cells[srRow, sColumn + syColumn].Characters[2, 5].Font.Subscript = true;
-            ws.Cells[srRow, sColumn + vColumn].Value = s_r_max;
+            ws.Cells[srRow, sColumn + vColumn].Value = Math.Round(s_r_max * Math.Pow(10, 3),0);
             ws.Cells[srRow, sColumn + uColumn].Value = "mm";
             ws.Cells[srRow, sColumn + rColumn].Value = "[1] Eq. 7.11";
 
@@ -440,7 +487,7 @@ namespace CrossSectionDesign.Classes_and_structures
             ws.Cells[sDiffRow, sColumn + syColumn].Characters[7, 1].Font.Name = "GreekS";
             ws.Cells[sDiffRow, sColumn + syColumn].Characters[2, 2].Font.Subscript = true;
             ws.Cells[sDiffRow, sColumn + syColumn].Characters[8, 2].Font.Subscript = true;
-            ws.Cells[sDiffRow, sColumn + vColumn].Value = StrainDiff;
+            ws.Cells[sDiffRow, sColumn + vColumn].Value = Math.Round(StrainDiff, 4);
             ws.Cells[sDiffRow, sColumn + uColumn].Value = "";
             ws.Cells[sDiffRow, sColumn + rColumn].Value = "[1] Eq. 7.9";
 
@@ -448,15 +495,27 @@ namespace CrossSectionDesign.Classes_and_structures
             ws.Cells[crackRow, sColumn + dColumn].Value = "Crack width";
             ws.Cells[crackRow, sColumn + syColumn].Value = "wk";
             ws.Cells[crackRow, sColumn + syColumn].Characters[2, 1].Font.Subscript = true;
-            ws.Cells[crackRow, sColumn + vColumn].Value = CrackWidth;
+            ws.Cells[crackRow, sColumn + vColumn].Value = Math.Round(CrackWidth*Math.Pow(10,3),3);
             ws.Cells[crackRow, sColumn + uColumn].Value = "mm";
             ws.Cells[crackRow, sColumn + rColumn].Value = "[1] Eq. 7.8";
 
-
-
-
-
         }
 
+        private string GetLimitStateName(LimitState ls)
+        {
+            switch (ls)
+            {
+                case LimitState.Ultimate:
+                    return "Ultimate limit state";
+                case LimitState.Service_CH:
+                    return "Service limit state - Characteristic";
+                case LimitState.Service_FR:
+                    return "Service limit state - Frequent";
+                case LimitState.Service_QP:
+                    return "Service limit state - Quasi-permanent";
+                default:
+                    return "Not defined.";
+            }
+        }
     }
 }

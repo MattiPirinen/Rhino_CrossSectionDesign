@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Rhino.Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,8 @@ namespace CrossSectionDesign.Classes_and_structures
 
         public CircleCrossSection(string name, Beam beam):base(name,beam)
         { }
-
+        public CircleCrossSection(string name, Beam beam,Point3d addingCentroid) : base(name, beam, addingCentroid)
+        { }
 
     }
 }
