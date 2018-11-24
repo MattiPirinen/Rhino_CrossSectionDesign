@@ -56,6 +56,7 @@
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.contextMenuStrip2 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.tabPageCrossSection = new System.Windows.Forms.TabPage();
+            this.buttonOpenHeatFlow = new System.Windows.Forms.Button();
             this.buttonExport = new System.Windows.Forms.Button();
             this.checkBoxShowCrackWidth = new System.Windows.Forms.CheckBox();
             this.groupBox11 = new System.Windows.Forms.GroupBox();
@@ -249,7 +250,7 @@
             this.buttonNewGenerCross = new System.Windows.Forms.Button();
             this.buttonNewRectCroSec = new System.Windows.Forms.Button();
             this.tabControlMain = new System.Windows.Forms.TabControl();
-            this.buttonOpenHeatFlow = new System.Windows.Forms.Button();
+            this.button3 = new System.Windows.Forms.Button();
             this.tabPageCrossSection.SuspendLayout();
             this.groupBox11.SuspendLayout();
             this.groupBox10.SuspendLayout();
@@ -297,6 +298,7 @@
             // tabPageCrossSection
             // 
             this.tabPageCrossSection.AutoScroll = true;
+            this.tabPageCrossSection.Controls.Add(this.button3);
             this.tabPageCrossSection.Controls.Add(this.buttonOpenHeatFlow);
             this.tabPageCrossSection.Controls.Add(this.buttonExport);
             this.tabPageCrossSection.Controls.Add(this.checkBoxShowCrackWidth);
@@ -334,6 +336,16 @@
             this.tabPageCrossSection.TabIndex = 0;
             this.tabPageCrossSection.Text = "Generic Cross Section";
             this.tabPageCrossSection.UseVisualStyleBackColor = true;
+            // 
+            // buttonOpenHeatFlow
+            // 
+            this.buttonOpenHeatFlow.Location = new System.Drawing.Point(4, 666);
+            this.buttonOpenHeatFlow.Name = "buttonOpenHeatFlow";
+            this.buttonOpenHeatFlow.Size = new System.Drawing.Size(127, 50);
+            this.buttonOpenHeatFlow.TabIndex = 44;
+            this.buttonOpenHeatFlow.Text = "Heat Flow Calculation";
+            this.buttonOpenHeatFlow.UseVisualStyleBackColor = true;
+            this.buttonOpenHeatFlow.Click += new System.EventHandler(this.buttonOpenHeatFlow_Click);
             // 
             // buttonExport
             // 
@@ -2378,15 +2390,15 @@
             this.tabControlMain.Size = new System.Drawing.Size(945, 751);
             this.tabControlMain.TabIndex = 1;
             // 
-            // buttonOpenHeatFlow
+            // button3
             // 
-            this.buttonOpenHeatFlow.Location = new System.Drawing.Point(4, 666);
-            this.buttonOpenHeatFlow.Name = "buttonOpenHeatFlow";
-            this.buttonOpenHeatFlow.Size = new System.Drawing.Size(127, 50);
-            this.buttonOpenHeatFlow.TabIndex = 44;
-            this.buttonOpenHeatFlow.Text = "Heat Flow Calculation";
-            this.buttonOpenHeatFlow.UseVisualStyleBackColor = true;
-            this.buttonOpenHeatFlow.Click += new System.EventHandler(this.buttonOpenHeatFlow_Click);
+            this.button3.Location = new System.Drawing.Point(190, 82);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(75, 23);
+            this.button3.TabIndex = 45;
+            this.button3.Text = "button3";
+            this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // MainPanel
             // 
@@ -2648,5 +2660,6 @@
         private System.Windows.Forms.Button buttonNewRectCroSec;
         private System.Windows.Forms.TabControl tabControlMain;
         private System.Windows.Forms.Button buttonOpenHeatFlow;
+        private System.Windows.Forms.Button button3;
     }
 }

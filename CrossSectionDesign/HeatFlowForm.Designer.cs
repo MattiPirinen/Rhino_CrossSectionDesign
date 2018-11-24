@@ -32,8 +32,11 @@
             System.Windows.Forms.DataVisualization.Charting.StripLine stripLine1 = new System.Windows.Forms.DataVisualization.Charting.StripLine();
             System.Windows.Forms.DataVisualization.Charting.StripLine stripLine2 = new System.Windows.Forms.DataVisualization.Charting.StripLine();
             System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.StripLine stripLine3 = new System.Windows.Forms.DataVisualization.Charting.StripLine();
+            System.Windows.Forms.DataVisualization.Charting.StripLine stripLine4 = new System.Windows.Forms.DataVisualization.Charting.StripLine();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend2 = new System.Windows.Forms.DataVisualization.Charting.Legend();
             this.chartTemp = new System.Windows.Forms.DataVisualization.Charting.Chart();
-            this.buttonTestCond = new System.Windows.Forms.Button();
             this.buttonStart = new System.Windows.Forms.Button();
             this.button_AddConstraint = new System.Windows.Forms.Button();
             this.buttonAddInspectionPoint = new System.Windows.Forms.Button();
@@ -46,7 +49,12 @@
             this.label4 = new System.Windows.Forms.Label();
             this.textBoxEndTime = new System.Windows.Forms.TextBox();
             this.checkBoxShowIpNumbers = new System.Windows.Forms.CheckBox();
+            this.textBoxSurfaceTemp = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.chartStrength = new System.Windows.Forms.DataVisualization.Charting.Chart();
             ((System.ComponentModel.ISupportInitialize)(this.chartTemp)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.chartStrength)).BeginInit();
             this.SuspendLayout();
             // 
             // chartTemp
@@ -85,16 +93,6 @@
             this.chartTemp.Size = new System.Drawing.Size(499, 450);
             this.chartTemp.TabIndex = 25;
             this.chartTemp.Text = "chartTemperature";
-            // 
-            // buttonTestCond
-            // 
-            this.buttonTestCond.Location = new System.Drawing.Point(199, 455);
-            this.buttonTestCond.Name = "buttonTestCond";
-            this.buttonTestCond.Size = new System.Drawing.Size(90, 67);
-            this.buttonTestCond.TabIndex = 49;
-            this.buttonTestCond.Text = "Test Cond";
-            this.buttonTestCond.UseVisualStyleBackColor = true;
-            this.buttonTestCond.Click += new System.EventHandler(this.buttonTestCond_Click);
             // 
             // buttonStart
             // 
@@ -207,11 +205,77 @@
             this.checkBoxShowIpNumbers.UseVisualStyleBackColor = true;
             this.checkBoxShowIpNumbers.CheckedChanged += new System.EventHandler(this.checkBoxShowIpNumbers_CheckedChanged);
             // 
+            // textBoxSurfaceTemp
+            // 
+            this.textBoxSurfaceTemp.Location = new System.Drawing.Point(103, 587);
+            this.textBoxSurfaceTemp.Name = "textBoxSurfaceTemp";
+            this.textBoxSurfaceTemp.Size = new System.Drawing.Size(90, 22);
+            this.textBoxSurfaceTemp.TabIndex = 60;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(5, 590);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(92, 17);
+            this.label5.TabIndex = 61;
+            this.label5.Text = "Surface temp";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(199, 592);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(17, 17);
+            this.label6.TabIndex = 62;
+            this.label6.Text = "C";
+            // 
+            // chartStrength
+            // 
+            chartArea2.AxisX.ArrowStyle = System.Windows.Forms.DataVisualization.Charting.AxisArrowStyle.Lines;
+            chartArea2.AxisX.Enabled = System.Windows.Forms.DataVisualization.Charting.AxisEnabled.True;
+            chartArea2.AxisX.LabelStyle.Interval = 0D;
+            chartArea2.AxisX.MinorGrid.Enabled = true;
+            chartArea2.AxisX.MinorGrid.LineColor = System.Drawing.Color.Silver;
+            stripLine3.BackColor = System.Drawing.Color.Red;
+            stripLine3.BorderColor = System.Drawing.Color.Black;
+            stripLine3.BorderWidth = 2;
+            chartArea2.AxisX.StripLines.Add(stripLine3);
+            chartArea2.AxisX.Title = "[kNm]";
+            chartArea2.AxisX2.Crossing = 0D;
+            chartArea2.AxisX2.Enabled = System.Windows.Forms.DataVisualization.Charting.AxisEnabled.False;
+            chartArea2.AxisX2.MinorGrid.Enabled = true;
+            chartArea2.AxisX2.MinorGrid.LineColor = System.Drawing.Color.Silver;
+            chartArea2.AxisX2.Title = "[kNm]";
+            chartArea2.AxisY.ArrowStyle = System.Windows.Forms.DataVisualization.Charting.AxisArrowStyle.Lines;
+            chartArea2.AxisY.Crossing = 0D;
+            chartArea2.AxisY.LabelStyle.Interval = 0D;
+            chartArea2.AxisY.MinorGrid.Enabled = true;
+            chartArea2.AxisY.MinorGrid.LineColor = System.Drawing.Color.Silver;
+            stripLine4.BorderColor = System.Drawing.Color.Black;
+            stripLine4.BorderWidth = 2;
+            chartArea2.AxisY.StripLines.Add(stripLine4);
+            chartArea2.AxisY.Title = "[kN]";
+            chartArea2.Name = "ChartAreaResults";
+            this.chartStrength.ChartAreas.Add(chartArea2);
+            legend2.Docking = System.Windows.Forms.DataVisualization.Charting.Docking.Bottom;
+            legend2.Name = "Legend1";
+            this.chartStrength.Legends.Add(legend2);
+            this.chartStrength.Location = new System.Drawing.Point(508, -2);
+            this.chartStrength.Name = "chartStrength";
+            this.chartStrength.Size = new System.Drawing.Size(499, 450);
+            this.chartStrength.TabIndex = 63;
+            this.chartStrength.Text = "chart1";
+            // 
             // HeatFlowForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(668, 598);
+            this.ClientSize = new System.Drawing.Size(1002, 631);
+            this.Controls.Add(this.chartStrength);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.textBoxSurfaceTemp);
             this.Controls.Add(this.checkBoxShowIpNumbers);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label4);
@@ -222,13 +286,13 @@
             this.Controls.Add(this.progressBarSimulation);
             this.Controls.Add(this.buttonCancel);
             this.Controls.Add(this.buttonAddInspectionPoint);
-            this.Controls.Add(this.buttonTestCond);
             this.Controls.Add(this.buttonStart);
             this.Controls.Add(this.button_AddConstraint);
             this.Controls.Add(this.chartTemp);
             this.Name = "HeatFlowForm";
             this.Text = "HeatFlowForm";
             ((System.ComponentModel.ISupportInitialize)(this.chartTemp)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.chartStrength)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -237,7 +301,6 @@
         #endregion
 
         private System.Windows.Forms.DataVisualization.Charting.Chart chartTemp;
-        private System.Windows.Forms.Button buttonTestCond;
         private System.Windows.Forms.Button buttonStart;
         private System.Windows.Forms.Button button_AddConstraint;
         private System.Windows.Forms.Button buttonAddInspectionPoint;
@@ -250,5 +313,9 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox textBoxEndTime;
         private System.Windows.Forms.CheckBox checkBoxShowIpNumbers;
+        private System.Windows.Forms.TextBox textBoxSurfaceTemp;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.DataVisualization.Charting.Chart chartStrength;
     }
 }

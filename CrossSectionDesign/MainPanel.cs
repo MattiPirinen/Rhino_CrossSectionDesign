@@ -138,7 +138,209 @@ namespace CrossSectionDesign
             // Create a dispose event handler
             Disposed += new EventHandler(UserControl1_Disposed);
 
+            CreateTestingBeam();
 
+
+        }
+
+        private void CreateTestingBeam()
+        {
+
+            radioButtonSteel.Checked = true;
+
+            EnableGenericCrossSection();
+            string name = textBoxName.Text;
+            listBoxCrossSecs.Items.Add(name);
+
+            Beam beam = new Beam("testing", 1.0, 1.5, 1.15, 0.85)
+            {
+            };
+            beam.CrossSec = new CrossSection(name, beam)
+            {
+                ConcreteMaterial = new ConcreteMaterial(comboBoxMaterialGeom.SelectedItem.ToString(), beam)
+            };
+            CrossSection cs = beam.CrossSec;
+
+            _projectPlugIn.Beams.Add(beam);
+            _projectPlugIn.SelectedBeamIndex = _projectPlugIn.Beams.Count - 1;
+            _projectPlugIn.CurrentBeam = beam;
+            tabControlMain.SelectedTab = tabPageCrossSection;
+
+
+
+            //Polyline pl = new Polyline(new Point3d[]{new Point3d(0,0,0),new Point3d(0,400,0),
+            //new Point3d(400,400,0),new Point3d(400,0,0), new Point3d(0,0,0)});
+            Curve c = CreateGeometryLarge.CreateOutline(new Point3d(0,0,0), 400, 400, 0)
+                    .ToNurbsCurve();
+
+            Brep b = Brep.CreatePlanarBreps(c)[0];
+
+            ObjectAttributes attr = new ObjectAttributes();
+            attr.SetUserString("Name", Enum.GetName(typeof(MaterialType), MaterialType.Concrete));
+
+            attr.SetUserString("infType", "GeometryLarge");
+
+            GeometryLarge seg = new GeometryLarge(MaterialType.Concrete, "C30/37", b, 
+                ProjectPlugIn.Instance.CurrentBeam.CrossSec);
+            Curve cu = c.DuplicateCurve();
+            c.Transform(seg.UnitTransform);
+            seg.BaseCurves.Add(cu);
+
+            attr.UserData.Add(seg);
+            Guid guid = _projectPlugIn.ActiveDoc.Objects.AddBrep(seg.GetModelUnitBrep());
+            _projectPlugIn.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+
+            dataGridView_GeometryLarge.Rows.Add(seg.Id, seg.Material.GetType() == typeof(SteelMaterial)
+                ? "Steel" : "Concrete");
+
+
+            _projectPlugIn.CurrentBeam.CrossSec.GeometryLargeIds.Add(seg.Id);
+            seg.CrosecId = _projectPlugIn.CurrentBeam.CrossSec.Id;
+            MaterialType type =
+                (MaterialType)Enum.Parse(typeof(MaterialType), comboBoxMaterialType.SelectedItem.ToString());
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
+
+            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover /
+                _projectPlugIn.Unitfactor, 0).ToString();
+
+            //Steel shell
+            
+            Curve line1 = seg.BaseCurves[0].ToNurbsCurve();
+            Curve line2 = seg.BaseCurves[0].ToNurbsCurve().Offset(
+                new Plane(seg.Centroid, new Vector3d(0, 0, 1)),
+                10,
+                _projectPlugIn.ActiveDoc.ModelAbsoluteTolerance,
+                CurveOffsetCornerStyle.Sharp)[0];
+
+            Brep brep = CreateGeometryLarge.CreateHollowBrep(line1, line2);
+            GeometryLarge gl = new GeometryLarge(MaterialType.Steel, comboBoxSteelS.SelectedItem.ToString(), brep,beam.CrossSec);
+
+            //Creates steel geometry and bakes it into the current doc
+            attr = new ObjectAttributes();
+            attr.UserData.Add(gl);
+            CreateGeometryLarge.GetLayerIndex(MaterialType.Steel, ref attr);
+            attr.SetUserString("Name", Enum.GetName(typeof(MaterialType), MaterialType.Steel));
+            attr.SetUserString("infType", "GeometryLarge");
+            guid = ProjectPlugIn.Instance.ActiveDoc.Objects.AddBrep(gl.GetModelUnitBrep());
+            ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+            beam.CrossSec.GeometryLargeIds.Add(gl.Id);
+
+            dataGridView_GeometryLarge.Rows.Add(gl.Id, gl.Material.GetType() == typeof(SteelMaterial)
+                ? "Steel" : "Concrete");
+                
+            //Reinforcements
+            //Creates points for the reinforcement
+            Curve tempCurve = cu.ToNurbsCurve().Offset(
+                new Plane(seg.Centroid, new Vector3d(0, 0, -1)),
+                35 + 10 + 25 / 2,
+                _projectPlugIn.ActiveDoc.ModelAbsoluteTolerance,
+                CurveOffsetCornerStyle.None)[0];
+            tempCurve.TryGetPolyline(out var pl1);
+            List<NurbsCurve> curves = pl1.GetSegments().Select(o => o.ToNurbsCurve()).ToList();
+            List<Curve> topAndBottom = new List<Curve>();
+            List<Curve> leftAndRight = new List<Curve>();
+
+            Plane localPl = Plane.WorldXY;
+            localPl.Rotate(0 * Math.PI * 2 / 360, Vector3d.ZAxis);
+
+            foreach (Curve curve in curves)
+            {
+                Vector3d difference = curve.PointAtEnd - curve.PointAtStart;
+                difference.Transform(Transform.PlaneToPlane(localPl, Plane.WorldXY));
+
+                if (Math.Abs(difference.X) < _projectPlugIn.ActiveDoc.ModelAbsoluteTolerance)
+                    leftAndRight.Add(curve);
+                else
+                    topAndBottom.Add(curve);
+            }
+
+            List<Point3d> points = new List<Point3d>();
+            foreach (var curve in topAndBottom)
+            {
+                curve.DivideByCount(4, true, out var tempPoint);
+                points.AddRange(tempPoint);
+            }
+
+            foreach (var curve in leftAndRight)
+            {
+                curve.DivideByCount(4, false, out var tempPoint);
+                points.AddRange(tempPoint);
+            }
+
+            //Checks for layer index for the reinforcement
+            int layerIndex = CreateReinforcement.GetOrCreateLayer(_projectPlugIn.ActiveDoc, "Reinforcement", Color.Black);
+            if (layerIndex == 999) return;
+            List<Reinforcement> temp = new List<Reinforcement>();
+            //Creates reinforcement instances and bakes the points and saves the instances into the points
+            foreach (Point3d point in points)
+            {
+                guid = _projectPlugIn.ActiveDoc.Objects.AddPoint(point);
+                Reinforcement reinf = new Reinforcement(cs)
+                {
+                    Material = new SteelMaterial(comboBoxReinfS.SelectedItem.ToString(), SteelType.Reinforcement, beam),
+                    Centroid = point,
+                    Diameter = 25 * Math.Pow(10, -3)
+                };
+                temp.Add(reinf);
+                attr = new ObjectAttributes();
+                attr.UserData.Add(reinf);
+                attr.SetUserString("Name", "Reinforcement");
+                attr.SetUserString("infType", "Reinforcement");
+                ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
+                _projectPlugIn.CurrentBeam.CrossSec.ReinforementIds.Add(reinf.Id);
+            }
+
+
+            foreach (Reinforcement reinforcement in temp)
+            {
+                reinforcement.CroSecId = _projectPlugIn.CurrentBeam.CrossSec.Id;
+                _projectPlugIn.CurrentBeam.CrossSec.ReinforementIds.Add(reinforcement.Id);
+
+                dataGridView_Reinforcement.Rows.Add(reinforcement.Id, "Reinforcement", reinforcement.Diameter * Math.Pow(10, 3));
+            }
+            labelConcreteCover.Text = Math.Round(_projectPlugIn.CurrentBeam.CrossSec.ConcreteCover /
+                _projectPlugIn.Unitfactor, 0).ToString();
+            ProjectPlugIn.Instance.ActiveDoc.Views.Redraw();
+
+
+
+
+            //Create heat flow stuff
+            if (_projectPlugIn.HeatFlowForm == null)
+                _projectPlugIn.HeatFlowForm = new HeatFlowForm();
+            _projectPlugIn.HeatFlowForm.Show();
+
+
+            /*
+            Point3d pt_start = new Point3d(0, 0, 0);
+            Point3d pt_end = new Point3d(200, 0, 0);
+            Vector3d v = pt_end - pt_start;
+            if (v.IsTiny(Rhino.RhinoMath.ZeroTolerance))
+                return;
+
+            Line l = new Line(pt_start, pt_end);
+            */
+            line2.TryGetPolyline(out var pl);
+
+            Transform inTr = _projectPlugIn.CurrentBeam.CrossSec.InverseUnitTransform;
+            pl.Transform(_projectPlugIn.CurrentBeam.CrossSec.UnitTransform);
+            CalcMesh cm = beam.CrossSec.CalcMesh;
+
+            foreach (BoarderEdge boarderEdge in cm.BoarderEdges)
+            {
+                for (int i = 0; i < pl.SegmentCount; i++)
+                {
+                    double distance = pl.SegmentAt(i).DistanceTo(boarderEdge.Centroid, true);
+                    if (distance < 0.001)
+                        boarderEdge.IsConductive = true;
+                }
+
+            }
+
+            _projectPlugIn.HeatFlowForm.AddInspectionPoint(new Point3d(-142.5, -142.5, 0));
+            _projectPlugIn.HeatFlowForm.AddInspectionPoint(new Point3d(-142.5, 0, 0));
+
+            ZoomToCurrentBeam();
         }
 
         private void InitializeComponentValues()
@@ -289,12 +491,9 @@ namespace CrossSectionDesign
 
         private void buttonCalculate_Click_1(object sender, EventArgs e)
         {
-            
-
             Polyline p = _projectPlugIn.CurrentBeam.CrossSec.CalculateStrengthCurve(Plane.WorldXY, GetLimitState());
 
             SetStrengthChartCurve(chartFreeMz, Moment.Mz,p);
-
         }
 
 
@@ -924,6 +1123,13 @@ namespace CrossSectionDesign
             if (_projectPlugIn.HeatFlowForm == null)
                 _projectPlugIn.HeatFlowForm = new HeatFlowForm();
             _projectPlugIn.HeatFlowForm.Show();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            Polyline p = _projectPlugIn.CurrentBeam.CrossSec.CalculateFireStrengthCurve(Plane.WorldXY, GetLimitState());
+
+            SetStrengthChartCurve(chartFreeMz, Moment.Mz, p);
         }
     }
 

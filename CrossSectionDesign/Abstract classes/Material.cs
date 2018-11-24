@@ -11,6 +11,8 @@ namespace CrossSectionDesign.Abstract_classes
         public Beam Bm { get; set; }
 
 
+
+
         public abstract Material DeepCopy();
 
         public virtual double E { get; set; }
@@ -18,12 +20,14 @@ namespace CrossSectionDesign.Abstract_classes
         public abstract string StrengthClass { get; set; } //Name of the material
 
         public abstract double Stress(double strain, LimitState ls);
-        
+
+        public abstract double TempStress(double strain, double temperature);
+
         public abstract Tuple<double,double> FailureStrains { get;}
 
-        public virtual double Density { get; set; }
-        public virtual double HeatConductivity { get; set; }
-        public virtual double SpecificHeat { get; set; }
-
+        public abstract double Density(double temperature);
+        public abstract double HeatConductivity(double temperature);
+        public abstract double SpecificHeat(double temperature);
+        public abstract double CalcTemp(double HeatQuantity);
     }
 }

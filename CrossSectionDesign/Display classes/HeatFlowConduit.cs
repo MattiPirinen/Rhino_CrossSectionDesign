@@ -3,22 +3,25 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using CrossSectionDesign.Classes_and_structures;
+using CrossSectionDesign.Enumerates;
 using CrossSectionDesign.Interfaces;
+using MoreLinq;
 using Rhino.Display;
 using Rhino.Geometry;
 
 namespace CrossSectionDesign.Display_classes
 {
-    public class HeatFlowConduit: Rhino.Display.DisplayConduit
+    public class HeatFlowConduit : Rhino.Display.DisplayConduit
     {
         public bool ForceMaxAndMin { get; set; } = false;
-
+        public Dictionary<HeatResultType,bool> ShownResults { get; set; } = new Dictionary<HeatResultType, bool> {
+            {HeatResultType.HeatFlow, true },
+            {HeatResultType.Temperature, true}
+        };
 
         public HeatFlowConduit()
         {
         }
-
-
 
         protected override void CalculateBoundingBox(CalculateBoundingBoxEventArgs e)
         {
@@ -60,23 +63,32 @@ namespace CrossSectionDesign.Display_classes
             if (ProjectPlugIn.Instance.CurrentBeam != null)
             {
 
-                double minValue = 0;
-                double maxValue = 100;
-
-                Beam b = ProjectPlugIn.Instance.CurrentBeam;
                 CrossSection cs = ProjectPlugIn.Instance.CurrentBeam.CrossSec;
-                List<ICalcGeometry> calcGeometries = new List<ICalcGeometry>();
 
-                List<GeometryLarge> glList = cs.GetGeometryLarges();
-                if (glList.Count != 1)
+                if (cs.CalcMesh == null)
                     return;
 
-                glList[0].CalcMesh.CalculateVertexColors(0.0,101.0);
                 Mesh calcMesh = new Mesh();
-                calcMesh.CopyFrom(glList[0].CalcMesh);
-
+                calcMesh.CopyFrom(cs.CalcMesh);
                 calcMesh.Transform(ProjectPlugIn.Instance.CurrentBeam.CrossSec.InverseUnitTransform);
-                e.Display.DrawMeshFalseColors(calcMesh);
+
+                if (ShownResults[HeatResultType.HeatFlow])
+                {
+
+                    foreach (MeshSegment ms in cs.CalcMesh.MeshSegments)
+                    {
+                        Point3d p = new Point3d(ms.Centroid);
+                        p.Transform(cs.InverseUnitTransform);
+                        Vector3d flow = ms.HeatFlow * cs.CalcMesh.HeatFlowFactor;
+                        Line l = new Line(p - flow / 2, p + flow / 2);
+                        e.Display.DrawArrow(l, Color.Black);
+                    }
+                }
+
+
+
+                if (ShownResults[HeatResultType.Temperature])
+                    e.Display.DrawMeshFalseColors(calcMesh);
             }
 
 

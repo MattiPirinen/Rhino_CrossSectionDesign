@@ -29,7 +29,7 @@ namespace CrossSectionDesign.Classes_and_structures
         public Material Material { get; set; }
         public double Area { get; private set; }
         public CrossSection OwnerCrossSection { get; set; }
-
+        public double Temperature { get; set; } = 20;
 
         public double Diameter
         {

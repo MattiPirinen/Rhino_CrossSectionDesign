@@ -99,14 +99,14 @@
       <DependentUpon>ChooseColumnsForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Classes and structures\Beam.cs" />
-    <Compile Include="Classes and structures\BoarderNeighbor.cs" />
+    <Compile Include="Classes and structures\BoarderEdge.cs" />
     <Compile Include="Classes and structures\CircleCrossSection.cs" />
     <Compile Include="Classes and structures\ClimateCondition.cs" />
     <Compile Include="Classes and structures\Column.cs" />
     <Compile Include="Classes and structures\ColLoadCase.cs" />
     <Compile Include="Classes and structures\ColumnCalculationSettings.cs" />
     <Compile Include="Classes and structures\CrackWidthCalculation.cs" />
-    <Compile Include="Classes and structures\FaceNeighbor.cs" />
+    <Compile Include="Classes and structures\FaceConnection.cs" />
     <Compile Include="Classes and structures\InspectionPoint.cs" />
     <Compile Include="Classes and structures\UserDataList.cs" />
     <Compile Include="Classes and structures\LoadCase.cs" />
@@ -137,6 +137,7 @@
     <Compile Include="Display classes\ResultConduit.cs" />
     <Compile Include="Enumerates\Axis.cs" />
     <Compile Include="Enumerates\CalcMethod.cs" />
+    <Compile Include="Enumerates\HeatResultType.cs" />
     <Compile Include="Enumerates\ColumnCalculationMethod.cs" />
     <Compile Include="Enumerates\ExposureClass.cs" />
     <Compile Include="Enumerates\LimitState.cs" />

@@ -1,4 +1,5 @@
 ﻿using CrossSectionDesign.Enumerates;
+using MoreLinq;
 using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
@@ -168,6 +169,55 @@ namespace CrossSectionDesign.Static_classes
             chart.ChartAreas[0].AxisY.MajorTickMark.Interval = minMaxInterval.Item3;
             chart.ChartAreas[0].AxisY.MajorTickMark.IntervalOffset = Math.Abs(minMaxInterval.Item1 % minMaxInterval.Item3);
         }
+
+        public static void SetAxisIntervalAndMax(Chart chart)
+        {
+            //X-axis min max and interval
+            double maxValue = 100;
+            double minValue = -100;
+
+
+            foreach (Series series in chart.Series)
+            {
+                maxValue =Math.Max(maxValue, series.Points.MaxBy(p =>p.XValue).XValue);
+                minValue = Math.Min(minValue, series.Points.MinBy(p => p.XValue).XValue);
+            }
+
+            Tuple<double, double, double> minMaxInterval = ChartManipulationTools.CreateInterval(maxValue, minValue);
+            //Tuple<double, double, double> minMaxInterval = CreateInterval(maxValue, 0);
+            chart.ChartAreas[0].AxisX.Crossing = 0;
+            chart.ChartAreas[0].AxisX.IsStartedFromZero = true;
+            chart.ChartAreas[0].AxisX.Minimum = minMaxInterval.Item1;
+            chart.ChartAreas[0].AxisX.Maximum = minMaxInterval.Item2;
+            chart.ChartAreas[0].AxisX.MajorGrid.IntervalOffset = Math.Abs(minMaxInterval.Item1 % minMaxInterval.Item3);
+            chart.ChartAreas[0].AxisX.MajorGrid.Interval = minMaxInterval.Item3;
+            chart.ChartAreas[0].AxisX.MinorGrid.Interval = minMaxInterval.Item3 / 5;
+            chart.ChartAreas[0].AxisX.MinorGrid.IntervalOffset = Math.Abs(minMaxInterval.Item1 % (minMaxInterval.Item3 / 5));
+            chart.ChartAreas[0].AxisX.LabelStyle.Interval = minMaxInterval.Item3;
+            chart.ChartAreas[0].AxisX.LabelStyle.IntervalOffset = Math.Abs(minMaxInterval.Item1 % minMaxInterval.Item3);
+            chart.ChartAreas[0].AxisX.MajorTickMark.Interval = minMaxInterval.Item3;
+            chart.ChartAreas[0].AxisX.MajorTickMark.IntervalOffset = Math.Abs(minMaxInterval.Item1 % minMaxInterval.Item3);
+
+            //Y-axis min, max and interval 
+            foreach (Series series in chart.Series)
+            {
+                maxValue =Math.Max(maxValue, series.Points.MaxBy(p => p.YValues[0]).YValues[0]);
+                minValue = Math.Min(minValue, series.Points.MinBy(p => p.YValues[0]).YValues[0]);
+            }
+            minMaxInterval = ChartManipulationTools.CreateInterval(maxValue, minValue);
+            //minMaxInterval = CreateInterval(0, minValue);
+            chart.ChartAreas[0].AxisY.Minimum = minMaxInterval.Item1;
+            chart.ChartAreas[0].AxisY.Maximum = minMaxInterval.Item2;
+            chart.ChartAreas[0].AxisY.MajorGrid.IntervalOffset = Math.Abs(minMaxInterval.Item1 % minMaxInterval.Item3);
+            chart.ChartAreas[0].AxisY.MajorGrid.Interval = minMaxInterval.Item3;
+            chart.ChartAreas[0].AxisY.MinorGrid.Interval = minMaxInterval.Item3 / 5;
+            chart.ChartAreas[0].AxisY.MinorGrid.IntervalOffset = Math.Abs(minMaxInterval.Item1 % (minMaxInterval.Item3 / 5));
+            chart.ChartAreas[0].AxisY.LabelStyle.Interval = minMaxInterval.Item3;
+            chart.ChartAreas[0].AxisY.LabelStyle.IntervalOffset = Math.Abs(minMaxInterval.Item1 % minMaxInterval.Item3);
+            chart.ChartAreas[0].AxisY.MajorTickMark.Interval = minMaxInterval.Item3;
+            chart.ChartAreas[0].AxisY.MajorTickMark.IntervalOffset = Math.Abs(minMaxInterval.Item1 % minMaxInterval.Item3);
+        }
+
 
         public static void CreateNewPointChart(string name, Chart chart)
         {

@@ -11,6 +11,7 @@ using Rhino.Geometry;
 using CrossSectionDesign.Static_classes;
 using MathNet.Numerics.LinearAlgebra;
 using Rhino.Geometry.Intersect;
+using System.Windows.Forms;
 
 namespace CrossSectionDesign.Classes_and_structures
 {
@@ -58,12 +59,51 @@ namespace CrossSectionDesign.Classes_and_structures
             InverseUnitTransform = Transform.Scale(AddingCentroid, 1.0/ProjectPlugIn.Instance.Unitfactor);
 
         }
+        public CalcMesh CalcMesh { get;private set; } 
+        public bool CreateCalcMesh()
+        {
+            List<GeometryLarge> gls = GetGeometryLarges();
+            List<Brep> breps = new List<Brep>();
+            gls.ForEach(gl => breps.Add(gl.BaseBrep));
+            Brep[] joinedBrep = Brep.JoinBreps(breps, ProjectPlugIn.Instance.ActiveDoc.ModelAbsoluteTolerance);
+            if (joinedBrep.Length != 1)
+            {
+                MessageBox.Show("Couldnt join geometry. Check that all the drawn geometries touch.");
+                return false;
+            }
+            else
+            {
+                MeshingParameters mp = new MeshingParameters
+                {
+                    SimplePlanes = false,
+                    GridMinCount = 500,
+                    GridMaxCount = 600
+                };
+                
+                Mesh[] temp = Mesh.CreateFromBrep(joinedBrep[0], mp);
+                /*
+                if (temp.Length !=1)
+                {
+                    MessageBox.Show("Not all of the geometries are touching. Cannot create calculation mesh.");
+                    return false;
+                }
+                */
+                Mesh m = new Mesh();
+                foreach (Mesh mesh in temp)
+                {
+                    m.Append(mesh);
+                }
 
 
+                CalcMesh = new CalcMesh(m,gls);
+                return true;
+            }
+        }
 
         private void UpdateGeometricValuesEvent(object sender, EventArgs e)
         {
             //Clear previous result values
+            CreateCalcMesh();
             HostBeam.ClearResults();
             ClearStresses();
             ProjectPlugIn.Instance.ResultConduit.Enabled = false;
@@ -388,7 +428,6 @@ namespace CrossSectionDesign.Classes_and_structures
             return temp;
         }
 
-
         public BoundingBox GetBoundingBox(Plane plane)
         {
             List<Brep> breps = GetGeometryLarges().Select(x => x.BaseBrep).ToList();
@@ -557,6 +596,47 @@ namespace CrossSectionDesign.Classes_and_structures
                 double strain = LinearInterplate(strainAtMin, strainAtMax, MinY, MaxY,
                     cp.Y);
                 double stress = segment.Material.Stress(strain, ls);
+                NList.Add(stress * segment.Area);
+                MzList.Add(NList[NList.Count - 1] * cpWorld.Y);
+                MyList.Add(NList[NList.Count - 1] * cpWorld.X);
+            }
+
+            double N = NList.Sum();
+
+            Point3d c = Centroid();
+            double tempTerm = N * c.Y;
+            double Mz = MzList.Sum() - tempTerm;
+
+            tempTerm = N * c.X;
+            double My = MyList.Sum() - tempTerm;
+
+            return new Point3d(N, My, Mz);
+        }
+
+        public Point3d CalculateFireLoading(double strainAtMin, double strainAtMax, Plane calcPlane, LimitState ls)
+        {
+            BoundingBox crossSectionbb = GetBoundingBox(calcPlane);
+            List<double> NList = new List<double>();
+            List<double> MzList = new List<double>(); //help values needed to calculate the moment
+            List<double> MyList = new List<double>();
+            //get minimum and maximum values in that axis in local coordinate axis
+            double MinY = crossSectionbb.Min.Y;
+            double MaxY = crossSectionbb.Max.Y;
+
+            List<ICalcGeometry> geoms = new List<ICalcGeometry>();
+            List<Reinforcement> r = GetReinforcements();
+            geoms.AddRange(r);
+            List<GeometryLarge> gl = GetGeometryLarges();
+            gl.ForEach(g => geoms.AddRange(g.CalcMesh.MeshSegments));
+
+            foreach (ICalcGeometry segment in geoms)
+            {
+                Point3d cp = segment.Centroid;
+                Point3d cpWorld = new Point3d(cp);
+                cp.Transform(Transform.PlaneToPlane(calcPlane, Plane.WorldXY));
+                double strain = LinearInterplate(strainAtMin, strainAtMax, MinY, MaxY,
+                    cp.Y);
+                double stress = segment.Material.TempStress(strain, segment.Temperature);
                 NList.Add(stress * segment.Area);
                 MzList.Add(NList[NList.Count - 1] * cpWorld.Y);
                 MyList.Add(NList[NList.Count - 1] * cpWorld.X);
@@ -861,6 +941,158 @@ namespace CrossSectionDesign.Classes_and_structures
 
             return strengthCurve;
         }
+
+        public Polyline CalculateFireStrengthCurve(Plane calcPlane, LimitState ls)
+        {
+            BoundingBox bb = GetBoundingBox(calcPlane);
+            double sectionHeigth = bb.Max.Y - bb.Min.Y;
+
+            Point3d strengthPoint;
+            //CreateGeometryForCalc(axis, calcPlane);
+
+            Polyline strengthCurve = new Polyline();
+
+            List<Reinforcement> reinf = GetReinforcements();
+
+            const double steps = 20;
+
+            const double maxStrain = 0.01; //Allowed strain of the reinforcement
+
+            //Reinf yield strain
+            double yieldStrain = 0.0022;
+            if (reinf.Count != 0)
+            {
+                SteelMaterial sm = (SteelMaterial)reinf[0].Material;
+                yieldStrain = sm.Fyd / sm.E;
+            }
+
+            strengthPoint = CalculateFireLoading(maxStrain, maxStrain, calcPlane, ls);
+            strengthCurve.Add(strengthPoint);
+
+            //Tension failure
+            List<double> minStrainList = new List<double>();
+            for (int i = 8; i < steps; i++)
+            {
+                minStrainList.Add(yieldStrain - (i / steps * (yieldStrain - _concreteMaterial.Epscu1)));
+            }
+
+
+            foreach (double minStrain in minStrainList)
+            {
+                strengthPoint = CalculateFireLoading(minStrain, maxStrain, calcPlane, ls);
+                strengthCurve.Add(strengthPoint);
+            }
+
+            //Until all in compression
+            List<double> maxStrainList = new List<double>();
+
+            for (int i = 0; i < steps; i++)
+            {
+                maxStrainList.Add(maxStrain - i / steps * maxStrain);
+            }
+
+            foreach (double maxStr in maxStrainList)
+            {
+                if (HasSteelShell)
+                {
+                    strengthPoint = CalculateFireLoading(-maxStrain, maxStr, calcPlane, ls);
+                    strengthCurve.Add(strengthPoint);
+                }
+                else
+                {
+                    strengthPoint = CalculateFireLoading(_concreteMaterial.Epscu1, maxStr, calcPlane, ls);
+                    strengthCurve.Add(strengthPoint);
+                }
+            }
+
+            //Until even compression
+            double na = sectionHeigth;
+
+            while (na < sectionHeigth * 5)
+            {
+                Tuple<double, double> strains = CalcMinAndMax(na, sectionHeigth);
+                strengthPoint = CalculateFireLoading(strains.Item1, strains.Item2, calcPlane, ls);
+                strengthCurve.Add(strengthPoint);
+                na += sectionHeigth * 0.251;
+            }
+
+
+
+            //Pure compression (If the crossSection has steel shell we allow stains to go all the way to Epscu1 without failure
+            //else only to Epsc2
+
+            if (HasSteelShell)
+            {
+                strengthPoint = CalculateFireLoading(_concreteMaterial.Epscu1, _concreteMaterial.Epscu1, calcPlane, ls);
+                strengthCurve.Add(strengthPoint);
+            }
+
+            else
+            {
+                strengthPoint = CalculateFireLoading(_concreteMaterial.Epsc2, _concreteMaterial.Epsc2, calcPlane, ls);
+                strengthCurve.Add(strengthPoint);
+            }
+
+            //Second round
+
+            //Until no more all in compression
+            na = 5 * sectionHeigth;
+
+            while (na > sectionHeigth)
+            {
+                Tuple<double, double> strains = CalcMinAndMax(na, sectionHeigth);
+                strengthPoint = CalculateFireLoading(strains.Item2, strains.Item1, calcPlane, ls);
+                strengthCurve.Add(strengthPoint);
+                na -= sectionHeigth * 0.25;
+            }
+
+
+            //Until balanced failure
+            maxStrainList = new List<double>();
+
+            for (int i = 0; i < steps; i++)
+            {
+                maxStrainList.Add(
+                    maxStrain * i / steps);
+            }
+
+            foreach (double maxStr in maxStrainList)
+            {
+                if (HasSteelShell)
+                {
+                    strengthPoint = CalculateFireLoading(maxStr, -maxStrain, calcPlane, ls);
+                    strengthCurve.Add(strengthPoint);
+                }
+                else
+                {
+                    strengthPoint = CalculateFireLoading(maxStr, _concreteMaterial.Epscu1, calcPlane, ls);
+                    strengthCurve.Add(strengthPoint);
+                }
+            }
+
+            //Until even tension failure
+            minStrainList = new List<double>();
+            for (int i = 0; i < steps; i++)
+            {
+                minStrainList.Add(_concreteMaterial.Epscu1 + (i / steps * (yieldStrain - _concreteMaterial.Epscu1)));
+            }
+
+            foreach (double minStrain in minStrainList)
+            {
+                strengthPoint = CalculateFireLoading(maxStrain, minStrain, calcPlane, ls);
+                strengthCurve.Add(strengthPoint);
+            }
+
+            strengthPoint = CalculateFireLoading(maxStrain, maxStrain, calcPlane, ls);
+            strengthCurve.Add(strengthPoint);
+
+
+            strengthCurve.DeleteShortSegments(100);
+
+            return strengthCurve;
+        }
+
+
 
         public double CalculateBalanceFailureNormalForce(Plane calcPlane,LimitState ls)
         {

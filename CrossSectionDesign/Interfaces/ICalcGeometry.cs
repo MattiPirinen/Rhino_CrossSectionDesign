@@ -13,6 +13,7 @@ namespace CrossSectionDesign.Interfaces
         Mesh GeometryMesh { get; set; }
         Mesh ResultMesh { get; set; }
         Material Material { get; set; }
+        double Temperature { get; set; }
         Dictionary<LoadCase, double> Stresses { get; set; }
         ICalcGeometry DeepCopy();
         Mesh GetModelScaleResultMesh();

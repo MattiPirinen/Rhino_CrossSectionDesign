@@ -33,8 +33,8 @@ namespace CrossSectionDesign.Classes_and_structures
             MeshingParameters mp = new MeshingParameters
             {
                 SimplePlanes = false,
-                GridMaxCount = 300,
-                GridMinCount = 400,
+                GridMaxCount = 400,
+                GridMinCount = 300,
             };
 
             Mesh[] temp = Mesh.CreateFromBrep(_baseBrep, mp);

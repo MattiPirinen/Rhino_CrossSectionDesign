@@ -2,9 +2,11 @@
 using CrossSectionDesign.Enumerates;
 using CrossSectionDesign.Interfaces;
 using CrossSectionDesign.Static_classes;
+using MoreLinq;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Geometry.Intersect;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,6 +17,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
+using Numerics = MathNet.Numerics.LinearAlgebra;
 
 namespace CrossSectionDesign
 {
@@ -22,22 +25,56 @@ namespace CrossSectionDesign
     {
         private ProjectPlugIn _projectPlugIn;
         private BackgroundWorker bw = new BackgroundWorker();
-        private int _stepSize;
-        private int _endTime;
+        private double _stepSize;
+        private double _endTime;
         private List<InspectionPoint> ips = new List<InspectionPoint>();
-
 
         private void backgroundWorker_progressChanged(object sender, ProgressChangedEventArgs e)
         {
             progressBarSimulation.Value = e.ProgressPercentage;
             _projectPlugIn.ActiveDoc.Views.Redraw();
-            
+
+
+            Beam b = ProjectPlugIn.Instance.CurrentBeam;
+            CrossSection cs = ProjectPlugIn.Instance.CurrentBeam.CrossSec;
+            List<ICalcGeometry> calcGeometries = new List<ICalcGeometry>();
+
+            if (_projectPlugIn.CurrentBeam.CrossSec.CalcMesh == null)
+                return;
+            CalcMesh cm = _projectPlugIn.CurrentBeam.CrossSec.CalcMesh;
+
+
+            Tuple<bool, double> val = (Tuple<bool, double>)e.UserState;
+
+            cm.CalculateVertexTemperatures(val.Item2);
+
             foreach (InspectionPoint ip in ips)
             {
                 if (ip.Results.Count != 0)
                     chartTemp.Series[ip.Id.ToString()].Points.Add(new DataPoint(ip.Results[ip.Results.Count - 1].X, ip.Results[ip.Results.Count - 1].Y));
             }
-            
+
+            DataPoint dp = new DataPoint(val.Item2, BoarderEdge.StandardFireTemp(val.Item2));
+            chartTemp.Series["Fire"].Points.Add(dp);
+            /*
+            if (val.Item1)
+            {
+                SetReinforcementTemperatures();
+                Series s = CreateNewSeries(chartStrength, "R"+((int)val.Item2 / 60).ToString());
+                Polyline pl = 
+                    _projectPlugIn.CurrentBeam.CrossSec.CalculateFireStrengthCurve(Plane.WorldXY, LimitState.Ultimate);
+                Moment m = Moment.Mz;
+                foreach (Point3d point in pl)
+                {
+                    
+                    s.Points.AddXY((m == Moment.Mz || m == Moment.MComb ? point.Z : point.Y) * Math.Pow(10, -3), point.X * Math.Pow(10, -3));
+                    if (m == Moment.MComb)
+                        s.Points.AddXY(point.Y * Math.Pow(10, -3), point.X * Math.Pow(10, -3));
+
+                }
+                ChartManipulationTools.SetAxisIntervalAndMax(chartStrength);
+            }
+            */
         }
 
         private void backGroundWorker_workCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -45,26 +82,30 @@ namespace CrossSectionDesign
             progressBarSimulation.Value = 0;
         }
 
-
         private async void StartHeatFlowCalculation(object sender, DoWorkEventArgs e)
         {
-            int stepSize = _stepSize;
-            int endTime = _endTime;
+            double stepSize = _stepSize;
+            double endTime = _endTime;
 
-            List<GeometryLarge> glList = _projectPlugIn.CurrentBeam.CrossSec.GetGeometryLarges();
-            if (glList.Count != 1 || glList[0].Material.GetType() != typeof(ConcreteMaterial))
+            if (_projectPlugIn.CurrentBeam.CrossSec.CalcMesh == null)
                 return;
-            glList[0].CalcMesh.MeshSegments.ForEach(o => o.Temperature = 0);
 
-            int index = glList[0].CalcMesh.MidIndice;
 
-            modifyResultMesh(glList[0]);
-            List<double> temperatures = new List<double>();
-
-            double progressStep = stepSize*500;
+            CalcMesh cm = _projectPlugIn.CurrentBeam.CrossSec.CalcMesh;
+            cm.MeshSegments.ForEach(o => o.HeatQuantity = 0);
+            for (int s = 0; s < cm.FaceHeats.Count; s++)
+            {
+                cm.FaceHeats[s] = 0;
+            }
+            int displayFrequency = 500;
+            double progressStep = stepSize* displayFrequency;
             double totProgress = 0;
             int progress = 0;
-            for (int i = 0; i < endTime; i += stepSize)
+
+            List<double> calcPoints = new List<double> { 0, 1800, 3600, 5400, 7200 };
+            int u = 0;
+
+            for (double i = 0; i < endTime; i += stepSize)
             {
                 if (bw.CancellationPending)
                 {
@@ -76,41 +117,62 @@ namespace CrossSectionDesign
                 {
                     progress = (int)(i*1.0 / endTime * 100);
                     totProgress += progressStep;
-                    bw.ReportProgress(progress);
+
+                    bw.ReportProgress(progress, Tuple.Create(false, i));
+                }
+                if (u < calcPoints.Count && i > calcPoints[u])
+                {
+                    progress = (int)(i * 1.0 / endTime * 100);
+                    totProgress += progressStep;
+                    bw.ReportProgress(progress, Tuple.Create(true, i));
+                    u++;
                 }
 
-                temperatures.Clear();
-                foreach (MeshSegment ms in glList[0].CalcMesh.MeshSegments)
-                {
-                    temperatures.Add(ms.CalculateNewTemperature(stepSize,i));
-                }
-
-                for (int k = 0; k < temperatures.Count; k++)
-                {
-                    glList[0].CalcMesh.MeshSegments[k].Temperature = temperatures[k];
-                }
+                cm.CalculateNewTemperatures2(stepSize, i);
             }
-
         }
 
-        private void InitializeCalcValues()
+        private void InitializeCalcValues(double stepSize)
         {
+            chartStrength.Series.Clear();
             chartTemp.Series.Clear();
             CrossSection cs = ProjectPlugIn.Instance.CurrentBeam.CrossSec;
             ips = cs.GetInspectionPoints();
-
+            string name;
             foreach (InspectionPoint inspection in ips)
             {
                 inspection.Results.Clear();
-                string name = inspection.Id.ToString();
+                name = inspection.Id.ToString();
                 chartTemp.Series.Add(name);
                 chartTemp.Series[name].ChartType = SeriesChartType.Line;
                 chartTemp.Series[name].BorderWidth = 2;
             }
 
+            name = "Fire";
+            chartTemp.Series.Add(name);
+            chartTemp.Series[name].ChartType = SeriesChartType.Line;
+            chartTemp.Series[name].BorderWidth = 2;
+
+
+            double heatFlowConvection =0.2* 25 * (500) * stepSize;
+            double heatFlowRadiation =0.2* 5.670367 * Math.Pow(10, -8) * 0.8* (Math.Pow((800 + 273), 4) -
+                Math.Pow(300+273, 4)) * stepSize;
+            double heatFlow = heatFlowConvection + heatFlowRadiation;
+
+            //cs.CalcMesh.CalculateNewTemperatures2(stepSize, 0);
+            cs.CalcMesh.HeatFlowFactor = (cs.CalcMesh.GetBoundingBox(false).Diagonal.Length*1000 / 6)/ heatFlow;
 
 
         }
+
+        private Series CreateNewSeries(Chart c, string name)
+        {
+            Series s = c.Series.Add(name);
+            c.Series[name].ChartType = SeriesChartType.Line;
+            c.Series[name].BorderWidth = 2;
+            return s;
+        }
+
 
         public HeatFlowForm()
         {
@@ -121,10 +183,28 @@ namespace CrossSectionDesign
             bw.ProgressChanged += backgroundWorker_progressChanged;
             bw.RunWorkerCompleted += backGroundWorker_workCompleted;
             bw.DoWork += StartHeatFlowCalculation;
+
+            InitializeComponentValues();
+
+        }
+
+        private void InitializeComponentValues()
+        {
+            textBoxStepSize.Text = "0.5";
+            textBoxEndTime.Text = "7201";
+            textBoxSurfaceTemp.Text = "200";
         }
 
         private void buttonAddConstraint_Click(object sender, EventArgs e)
         {
+            /*
+            if (!double.TryParse(textBoxSurfaceTemp.Text, out double surfTemp))
+            {
+                MessageBox.Show("Add the surface temperature first.");
+                return;
+            }
+              */  
+
             Rhino.Input.Custom.GetPoint gp = new Rhino.Input.Custom.GetPoint();
             gp.SetCommandPrompt("Start of line");
             gp.Get();
@@ -153,29 +233,43 @@ namespace CrossSectionDesign
             if (glList.Count != 1 || glList[0].Material.GetType() != typeof(ConcreteMaterial))
                 return;
 
-            foreach (BoarderNeighbor boarderNeighbor in glList[0].CalcMesh.boarderNeighbors)
+            foreach (BoarderEdge boarderEdge in glList[0].CalcMesh.BoarderEdges)
             {
-                double distance = l.DistanceTo(boarderNeighbor.Centroid, true);
+                double distance = l.DistanceTo(boarderEdge.Centroid, true);
                 if (distance < 0.001)
                 {
-                    boarderNeighbor.Temperature = 100;
-                    boarderNeighbor.IsConductive = true;
+                    boarderEdge.IsConductive = true;
                 }
             }
         }
 
         private void buttonStart_Click(object sender, EventArgs e)
         {
-            if (int.TryParse(textBoxStepSize.Text, out int stepSize) &&
-                int.TryParse(textBoxEndTime.Text, out int endTime))
+            if (double.TryParse(textBoxStepSize.Text, out double stepSize) &&
+                double.TryParse(textBoxEndTime.Text, out double endTime))
             {
+
                 _stepSize = stepSize;
                 _endTime = endTime;
+                _projectPlugIn.HeatFlowConduit.Enabled = true;
+
+                //******** Set color scale **********
                 
 
+                _projectPlugIn.ColorScaleDisplay.Enabled = true;
+                _projectPlugIn.ColorScaleDisplay.SetColorScale(0,
+                    1200, 0, 0.7, "Temp [C]");
+
+                //******** Start Calculation **********
+                /*
+                Mesh m = new Mesh();
+                m.Append(_projectPlugIn.CurrentBeam.CrossSec.CalcMesh);
+                m.Transform(_projectPlugIn.CurrentBeam.CrossSec.InverseUnitTransform);
+                _projectPlugIn.ActiveDoc.Objects.AddMesh(m);
+                */
                 if (!bw.IsBusy)
                 {
-                    InitializeCalcValues();
+                    InitializeCalcValues(stepSize);
                     bw.RunWorkerAsync();
                 }
                     
@@ -248,9 +342,30 @@ namespace CrossSectionDesign
 
         }
 
+        private void SetReinforcementTemperatures()
+        {
+            List<Reinforcement> rs = _projectPlugIn.CurrentBeam.CrossSec.GetReinforcements();
+            List<GeometryLarge> gls = _projectPlugIn.CurrentBeam.CrossSec.GetGeometryLarges();
+            if (gls.Count != 1)
+                return;
+            CalcMesh m = gls[0].CalcMesh;
+            foreach (Reinforcement r in rs)
+            {
+                Line l = new Line(r.Centroid + Vector3d.ZAxis * -10000, Vector3d.ZAxis * 20000);
+
+                Point3d[] pts = Intersection.MeshLine(m.ResultMesh, l, out int[] temp1);
+                if (pts.Length != 1)
+                    continue;
+                else
+                    r.Temperature =  pts[0].Z;
+            }
+        }
+
+
         private void buttonCancel_Click(object sender, EventArgs e)
         {
             bw.CancelAsync();
+            _projectPlugIn.HeatFlowConduit.Enabled = false;
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
@@ -260,10 +375,38 @@ namespace CrossSectionDesign
 
         private void int_KeyPress(object sender, KeyPressEventArgs e)
         {
-            if (!char.IsDigit(e.KeyChar) && e.KeyChar != '\b')
+            // Verify that the pressed key isn't CTRL or any non-numeric digit
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && (e.KeyChar != '.') && (e.KeyChar != '\b'))
             {
                 e.Handled = true;
             }
+
+            // If you want, you can allow decimal (float) numbers
+            if ((e.KeyChar == '.') && ((sender as TextBox).Text.IndexOf('.') > -1))
+            {
+                e.Handled = true;
+            }
+        }
+
+        public void AddInspectionPoint(Point3d p)
+        {
+            if (_projectPlugIn.CurrentBeam.CrossSec.CalcMesh == null)
+                return;
+
+            CalcMesh cm = _projectPlugIn.CurrentBeam.CrossSec.CalcMesh;
+
+            InspectionPoint ip = new InspectionPoint(p, _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid,
+                _projectPlugIn.CurrentBeam.CrossSec);
+            cm.InspectionPoints.Add(ip);
+            
+            ObjectAttributes attr = new ObjectAttributes();
+
+            attr.SetUserString("infType", "InspectionPoint");
+            GetLayerIndex(ref attr);
+
+            attr.UserData.Add(ip);
+            Guid guid = ProjectPlugIn.Instance.ActiveDoc.Objects.AddPoint(p);
+            ProjectPlugIn.Instance.ActiveDoc.Objects.ModifyAttributes(guid, attr, true);
         }
 
         private void buttonAddInspectionPoint_Click(object sender, EventArgs e)
@@ -274,25 +417,14 @@ namespace CrossSectionDesign
             if (gp.CommandResult() != Rhino.Commands.Result.Success)
                 return;
             Point3d location = gp.Point();
-
-            List<GeometryLarge> glList = _projectPlugIn.CurrentBeam.CrossSec.GetGeometryLarges();
-            if (glList.Count != 1 || glList[0].Material.GetType() != typeof(ConcreteMaterial))
+            CalcMesh cm = _projectPlugIn.CurrentBeam.CrossSec.CalcMesh;
+            if (cm == null)
                 return;
 
-            CalcMesh cm = glList[0].CalcMesh;
-            List<Point3d> centroids = new List<Point3d>();
-            cm.MeshSegments.ForEach(o => centroids.Add(o.Centroid));
-
-            
-            Point3d calcSpacePoint = new Point3d(location);
-            calcSpacePoint.Transform(_projectPlugIn.CurrentBeam.CrossSec.UnitTransform);
-            PointCloud cl = new PointCloud(centroids);
-            int index = cl.ClosestPoint(calcSpacePoint);
-
-            InspectionPoint ip = new InspectionPoint(location, cm.MeshSegments[index], _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid,
+            InspectionPoint ip = new InspectionPoint(location, _projectPlugIn.CurrentBeam.CrossSec.AddingCentroid,
                 _projectPlugIn.CurrentBeam.CrossSec);
-            cm.MeshSegments[index].HasInspectionPoint = true;
-            cm.MeshSegments[index].InspectionPoint = ip;
+
+            cm.InspectionPoints.Add(ip);
 
             ObjectAttributes attr = new ObjectAttributes();
 

@@ -551,7 +551,7 @@ namespace CrossSectionDesign.Classes_and_structures
             LocalAxisConduit = new LocalAxisConduit(this) { Enabled = true };
             ColorScaleDisplay = new ColorScaleDisplay();
             CrackWidthConduit = new CrackWidthConduit() { Enabled = true };
-            HeatFlowConduit = new HeatFlowConduit() { Enabled = true };
+            HeatFlowConduit = new HeatFlowConduit() { Enabled = false };
             CursorConduit = new CursorConduit() { Enabled = true };
             InspectionPointConduit = new InspectionPointConduit() { Enabled = false };
             RhinoApp.Idle += OnIdle; // subcribe;

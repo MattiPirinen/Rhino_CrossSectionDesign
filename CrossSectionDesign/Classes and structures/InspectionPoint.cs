@@ -16,7 +16,6 @@ namespace CrossSectionDesign.Classes_and_structures
         public override string Description => "Point to inspect the heat flow results";
         public Point3d Location { get; set; }
         public List<Point2d> Results { get; private set; } = new List<Point2d>();
-        public MeshSegment MeshSegment { get; private set; }
         public Transform UnitTransform { get; set; }
         public Transform InverseUnitTransform { get; set; }
         public CrossSection OwnerCrossSection { get; set; }
@@ -28,7 +27,7 @@ namespace CrossSectionDesign.Classes_and_structures
             _id++;
         }
 
-        public InspectionPoint(Point3d location, MeshSegment ms, Point3d transformCenter, CrossSection ownerCrossSection)
+        public InspectionPoint(Point3d location, Point3d transformCenter, CrossSection ownerCrossSection)
         {
             Id = _id;
             _id++;
@@ -38,7 +37,6 @@ namespace CrossSectionDesign.Classes_and_structures
             InverseUnitTransform = Transform.Scale(transformCenter, 1 / ProjectPlugIn.Instance.Unitfactor);
             location.Transform(UnitTransform);
             Location = location;
-            MeshSegment = ms;
         }
 
         public Point3d GetModelUnitPoint()
